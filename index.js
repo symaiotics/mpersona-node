@@ -11,7 +11,12 @@ const apiErrorHandler = require('./error/apiErrorHandler');
 if (process.env.MODE == 'DEV') app.use('/', express.static(path.join(__dirname, '/public')))
 
 //Register the routes
+//Initial Release
 app.use('/healthcheck', require('./routes/healthcheck'));
+app.use('/personas', require('./routes/personas'));
+
+
+
 app.use('/accounts', require('./routes/accounts'));
 app.use('/entities', require('./routes/entities'));
 app.use('/info', require('./routes/info'));
