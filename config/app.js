@@ -25,8 +25,10 @@ var corsOptions = {
 }
 
 //Implement context-specific CORS responses
-if (process.env.MODE == 'PROD') app.use(cors(corsOptions)); //Restrict CORS
-if (process.env.MODE == 'DEV') app.use(cors()); //Unrestricted CORS
+// if (process.env.MODE == 'PROD') app.use(cors(corsOptions)); //Restrict CORS
+// if (process.env.MODE == 'DEV') 
+
+app.use(cors()); //Unrestricted CORS
 
 //Register Custom Global Middleware
 const logger = require("../middleware/logger").logger;
@@ -45,10 +47,6 @@ if (process.env.DATASTORE == 'MongoDB' || process.env.DATASTORE == 'CosmosDB') {
     });
   }
 
-  //Azure SQL
-  if (process.env.DATASTORE == 'AzureSQL') {
- 
-  }
 
 //Export the app for use on the index.js page
 module.exports = app;
