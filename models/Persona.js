@@ -12,6 +12,10 @@ const SkillSchema = new mongoose.Schema({
         required: true,
         default: uuidv4
     },
+
+    code: {type:Number}, //numeric value
+    alpha: {type:String}, //linguistic value
+
     label: {
         en: {
             type: String,
