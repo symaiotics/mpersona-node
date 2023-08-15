@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+# 👇 global env
+env:
+  VITE_API_URL: 'https://mpersona-node.azurewebsites.net'
+
 jobs:
   build:
     runs-on: ubuntu-latest
