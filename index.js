@@ -14,15 +14,13 @@ app.use('/', express.static(path.join(__dirname, '/public')))
 //Initial Release
 app.use('/healthcheck', require('./routes/healthcheck'));
 app.use('/personas', require('./routes/personas'));
+app.use('/categories', require('./routes/categories'));
 
 //User management
 app.use('/accounts', require('./routes/accounts'));
 
-//OpenAI
+//Generate prompts
 app.use('/prompts', require('./routes/prompts'));
-// app.use('/entities', require('./routes/entities'));
-// app.use('/info', require('./routes/info'));
-
 
 //Establish a 404 Not Found Custom Response
 app.use((req, res,next)=>{
