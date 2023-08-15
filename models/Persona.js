@@ -5,6 +5,9 @@ const { v4: uuidv4 } = require('uuid');
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
+
+const { CategorySchema } = require('./Category');
+
 const SkillSchema = new mongoose.Schema({
     uuid: {
         type: String,
@@ -13,8 +16,8 @@ const SkillSchema = new mongoose.Schema({
         default: uuidv4
     },
 
-    code: {type:Number}, //numeric value
-    alpha: {type:String}, //linguistic value
+    code: { type: Number }, //numeric value
+    alpha: { type: String }, //linguistic value
 
     label: {
         en: {
@@ -38,28 +41,27 @@ const SkillSchema = new mongoose.Schema({
     }
 });
 
-const CategorySchema = new mongoose.Schema(
-    {
-        uuid: {
-            type: String,
-            unique: true,
-            required: true,
-            default: uuidv4
-        },
-
-        code: {type:Number}, //numeric value
-        alpha: {type:String}, //linguistic value
-        label: {
-            en: {
-                type: String,
-                required: false
-            },
-            fr: {
-                type: String,
-                required: false
-            }
-        }
-    });
+// const CategorySchema = new mongoose.Schema(
+//     {
+//         uuid: {
+//             type: String,
+//             unique: true,
+//             required: true,
+//             default: uuidv4
+//         },
+//         code: { type: Number, unique: true }, //numeric value
+//         alpha: { type: String, unique: true }, //linguistic value
+//         label: {
+//             en: {
+//                 type: String,
+//                 required: false
+//             },
+//             fr: {
+//                 type: String,
+//                 required: false
+//             }
+//         }
+//     });
 
 const FileSchema = new mongoose.Schema(
     {
@@ -118,6 +120,8 @@ const PersonaSchema = new Schema({
         required: true,
         default: uuidv4
     },
+
+    //Textual description
     name: {
         type: String,
         required: true,
@@ -133,19 +137,12 @@ const PersonaSchema = new Schema({
             required: false
         }
     },
-    momentCreated: {
-        type: Date,
-        default: Date.now
-    },
-    status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active'
-    },
-    createdBy: {
+    basePrompt: {
         type: String,
         required: false
     },
+
+    //Arrays
     skills: {
         type: [SkillSchema],
         default: []
@@ -162,10 +159,23 @@ const PersonaSchema = new Schema({
         type: [ReferenceBlockSchema],
         default: []
     },
-    basePrompt: {
+
+    //Administrative 
+    createdBy: {
         type: String,
         required: false
-    }
+    },
+    status: {
+        type: String,
+        enum: ['active', 'inactive'],
+        default: 'active'
+    },
+    momentCreated: {
+        type: Date,
+        default: Date.now
+    },
+
+
 });
 
 const Persona = mongoose.model('Persona', PersonaSchema);
