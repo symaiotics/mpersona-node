@@ -1,0 +1,32 @@
+{
+  "name": "mpersona-node",
+  "version": "0.0.1",
+  "description": "Interact with persistent evolving personas",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "graph",
+    "ai",
+    "openai",
+    "gpt4",
+    "gpt-3-5",
+    "personas"
+  ],
+  "author": "Symaiotics Corporation",
+  "license": "MIT",
+  "dependencies": {
+    "axios": "^1.4.0",
+    "cors": "^2.8.5",
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "helmet": "^7.0.0",
+    "jsonwebtoken": "^9.0.1",
+    "mongoose": "^7.3.4",
+    "openai": "^3.3.0",
+    "request-ip": "^3.3.0",
+    "uuid": "^9.0.0",
+    "ytdl-core": "^4.11.4"
+  }
+}
