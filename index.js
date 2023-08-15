@@ -7,20 +7,22 @@ const app = require("./config/app.js");
 const apiErrorHandler = require('./error/apiErrorHandler');
 
 //Establish the Routes and Static Content
-//If in DEV, publish the HTML content in the Public Folder for testing
-if (process.env.MODE == 'DEV') app.use('/', express.static(path.join(__dirname, '/public')))
+//Static Content
+app.use('/', express.static(path.join(__dirname, '/public')))
 
 //Register the routes
 //Initial Release
 app.use('/healthcheck', require('./routes/healthcheck'));
 app.use('/personas', require('./routes/personas'));
 
-
-
+//User management
 app.use('/accounts', require('./routes/accounts'));
-app.use('/entities', require('./routes/entities'));
-app.use('/info', require('./routes/info'));
+
+//OpenAI
 app.use('/prompts', require('./routes/prompts'));
+// app.use('/entities', require('./routes/entities'));
+// app.use('/info', require('./routes/info'));
+
 
 //Establish a 404 Not Found Custom Response
 app.use((req, res,next)=>{
