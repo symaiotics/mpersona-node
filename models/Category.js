@@ -9,12 +9,12 @@ const CategorySchema = new mongoose.Schema(
     {
         uuid: {
             type: String,
-            unique: true,
+            unique: false,
             required: true,
             default: uuidv4
         },
-        code: { type: Number, unique: true, required: true }, //numeric value
-        alpha: { type: String, unique: true, required: true }, //reference value
+        code: { type: Number, unique: false, required: true }, //numeric value
+        alpha: { type: String, unique: false, required: true }, //reference value
         label: {
             en: {
                 type: String,

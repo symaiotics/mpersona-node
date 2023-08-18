@@ -11,7 +11,7 @@ const { CategorySchema } = require('./Category');
 const SkillSchema = new mongoose.Schema({
     uuid: {
         type: String,
-        unique: true,
+        unique: false,
         required: true,
         default: uuidv4
     },
@@ -45,12 +45,12 @@ const SkillSchema = new mongoose.Schema({
 //     {
 //         uuid: {
 //             type: String,
-//             unique: true,
+//             unique: false,
 //             required: true,
 //             default: uuidv4
 //         },
-//         code: { type: Number, unique: true }, //numeric value
-//         alpha: { type: String, unique: true }, //linguistic value
+//         code: { type: Number, unique: false }, //numeric value
+//         alpha: { type: String, unique: false }, //linguistic value
 //         label: {
 //             en: {
 //                 type: String,
@@ -67,7 +67,7 @@ const FileSchema = new mongoose.Schema(
     {
         uuid: {
             type: String,
-            unique: true,
+            unique: false,
             required: true,
             default: uuidv4
         },
@@ -93,7 +93,7 @@ const ReferenceBlockSchema = new mongoose.Schema(
     {
         uuid: {
             type: String,
-            unique: true,
+            unique: false,
             required: true,
             default: uuidv4
         },
@@ -116,7 +116,7 @@ const ReferenceBlockSchema = new mongoose.Schema(
 const PersonaSchema = new Schema({
     uuid: {
         type: String,
-        unique: true,
+        unique: false,
         required: true,
         default: uuidv4
     },
