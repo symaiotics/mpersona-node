@@ -6,8 +6,8 @@ router.get('/', categoryController.getCategories);
 router.post('/', categoryController.createCategories);
 
 //Admin functions
-router.get('/delete', categoryController.deleteAllCategories);
-router.delete('/', categoryController.deleteAllCategories);
+router.get('/deleteAll', categoryController.deleteAllCategories);
+router.delete('/deleteAll', categoryController.deleteAllCategories);
 
 //export the router back to the index.js page
 module.exports = router;

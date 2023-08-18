@@ -1,7 +1,7 @@
 //Import Required Libraries for this .js
 const express = require("express");
 const path = require('path');
-const app = require("./config/app.js");
+const {app} = require("./config/app.js");
 
 //Bring in custom error handling
 const apiErrorHandler = require('./error/apiErrorHandler');

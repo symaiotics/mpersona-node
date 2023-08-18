@@ -20,7 +20,20 @@ exports.getCategories = async function (req, res, next) {
 exports.createCategories = async function (req, res, next) {
     try {
         var categories = req.body.categories || req.query.categories || [];
-        Category.insertMany(categories).then((response) => {
+
+        //Category.insertMany(categories)
+        
+        Category.bulkWrite(
+            categories.map((category) => 
+              ({
+                updateOne: {
+                  filter: { code : category.code },
+                  update: { $set: category },
+                  upsert: true
+                }
+              })
+            )
+          ).then((response) => {
             console.log("Response", response)
             res.status(201).send({ message: "Inserted admin categories", payload: response });
         }).catch((error) => {

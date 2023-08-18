@@ -2,6 +2,10 @@
 const express = require("express");
 const app = express();
 const path = require('path');
+const WebSocket = require('ws');
+
+const uuidv4  = require('uuid').v4;
+
 
 //Process JSON and urlencoded parameters
 app.use(express.json({ extended: true, limit: '10mb' }));
@@ -48,5 +52,25 @@ if (process.env.DATASTORE == 'MongoDB' || process.env.DATASTORE == 'CosmosDB') {
   }
 
 
+  
+// Create a WebSocket server instance, sharing the HTTP server
+const wss = new WebSocket.Server({ server });
+
+// Set up an event listener for incoming WebSocket connections
+wss.on('connection', (ws) => {
+  console.log('Client connected');
+  
+  ws.uuid = uuidv4();
+  ws.send(JSON.stringify({ uuid: ws.uuid }));
+
+  // Handle messages received from clients
+  ws.on('message', (message) => {
+    // console.log('Received:', message);
+    
+    // Send a message back to the client
+    // ws.send('Hello from the server!');
+  });
+});
+
 //Export the app for use on the index.js page
-module.exports = app;
+module.exports = { app, wss };
