@@ -68,46 +68,29 @@ exports.simplePrompt = async function (req, res, next) {
                 const message = line.replace(/^data: /, '');
                 if (message === '[DONE]') {
                     // return; // Stream finished
-
-
-                    // var response = chat_completion.data.choices;
-                    // res.status(200).send({ message: `Here is the OpenAI GPT ${model} response to your prompt`, payload: { text: response, code: extractCode(response[0].message.content) } })
-
                     res.status(200).send({ message: `Here is the OpenAI GPT ${model} response to your prompt`, payload: { text: combinedResponse, code: [] } })
+                    process.stdout.write(`DONE`);
 
                 }
-
-                // try{
-
-                //     var dataObj = data.toString().replaceAll('data: ',"").trim();
-                //     dataObj = JSON.parse(dataObj);
-                //     console.log("content:",dataObj.choices)
-                // }
-                // catch(error)
-                // {
-                //     console.log("Data not JSON", error)
-                //     console.log("Text", data.toString())
-                // }   
-
-
-
-                try {
-                    const parsed = JSON.parse(message).choices[0].delta.content;
-                    if (parsed !== null && parsed !== 'null' && parsed !== 'undefined' && parsed !== undefined) {
-                        //Send the fragment back to the correct client
-                        if (wss && wsUuid) {
-                            wss.clients.forEach((client) => {
-                                if (client.uuid == wsUuid) { //client.readyState === WebSocket.OPEN && 
-                                    client.send(JSON.stringify({ fragment: parsed }));
-                                }
-                            });
+                else {
+                    try {
+                        const parsed = JSON.parse(message).choices?.[0]?.delta?.content;
+                        if (parsed && parsed !== null && parsed !== 'null' && parsed !== 'undefined' && parsed !== undefined) {
+                            //Send the fragment back to the correct client
+                            if (wss && wsUuid) {
+                                wss.clients.forEach((client) => {
+                                    if (client.uuid == wsUuid) { //client.readyState === WebSocket.OPEN && 
+                                        client.send(JSON.stringify({ fragment: parsed }));
+                                    }
+                                });
+                            }
+                            combinedResponse += parsed;
+                            process.stdout.write(`.`); //Show some indication that it is still working
                         }
-                        combinedResponse += parsed;
-                        console.log(parsed);
-                    }
 
-                } catch (error) {
-                    console.error('Could not JSON parse stream message', message, error);
+                    } catch (error) {
+                        console.error('Could not JSON parse stream message', message, error);
+                    }
                 }
             }
         });

@@ -8,6 +8,7 @@ const apiErrorHandler = require('./error/apiErrorHandler');
 
 //Establish the Routes and Static Content
 //Static Content
+app.get('/favicon.ico', (req, res) => res.status(204));
 app.use('/', express.static(path.join(__dirname, '/public')))
 
 //Register the routes

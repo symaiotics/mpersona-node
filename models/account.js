@@ -3,19 +3,18 @@ var mongoose = require('mongoose');
 var accountSchema = new mongoose.Schema({
 
   //User information
-  username: { type: String, unique : true, required: true }, //the unique username of this user
-  name: { type: String, required: true }, //the user's display name
-  email: { type: String, required: true }, //the unique email of this account
-
-  //The user roles for this system
-  //Altough we would think this would be type: Array, it is type Array of Strings, and must only contain the following enumerated values
-  roles: { type: [String], required: true, enum: ['reader', 'contributor', 'owner', 'sysadmin'], }, //an array of roles for this account
-  passwordHash: { type: String, required: false }, //a hashed password
-  passwordSalt: { type: String, required: false }, //a salt for the password
+  uuid: { type: String, unique: true, required: true }, //the unique username of this user
+  username: { type: String, unique: true, required: true }, //the unique username of this user
+  password: { type: String, required: true }, //a hashed password
+  salt: { type: String, required: true }, //a salt for the password
+  email: { type: String, required: false }, //the unique email of this account
+  useCase: { type: String, required: false },
+  notes: { type: String, required: false },
   preferredLng: { type: String, required: false }, //the user's preferred language code
+  roles: { type: [String], required: true, enum: ['user', 'contributor', 'owner', 'sysadmin'], }, //an array of roles for this account
+  active: { type: Boolean, required: true }, //active:false means the account is paused or suspend the account temporarily
 
   //Account settings info
-  active: { type: Boolean, required: true }, //active:false means the account is paused or suspend the account temporarily
   momentFirstLogin: { type: Date, required: false }, //the moment of the first login
   momentLastLogin: { type: Date, required: false }, //update the last login
 

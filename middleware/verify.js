@@ -1,9 +1,74 @@
-//Verify placeholder
-//Called from specific APIs only
+const jwt = require('jsonwebtoken');
+const uuidv4 = require('uuid').v4;
 
-const verify = function (req, res, next) {
-    console.log('auth verified')
-    next()
+// const validateToken = (req, res, next) => {
+//     const authHeader = req.headers.authorization;
+
+//     if (authHeader) {
+//         const token = authHeader.split(' ')[1];
+
+//         jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+//             if (err) {
+//                 return res.sendStatus(403);
+//             }
+
+//             req.user = user;
+//             next();
+//         });
+//     } else {
+//         res.sendStatus(401);
+//     }
+// };
+
+const validateAndRenewToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+
+    if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+            if (err) {
+                return res.sendStatus(403);
+            }
+
+            req.user = user;
+            const tokenDecoded = jwt.decode(token);
+
+            //If the token is about to explore within 20 minutes generate a new token and attach it as a response header
+            const expirationDate = new Date(tokenDecoded.exp * 1000);
+            const twentyMinutesFromNow = new Date(Date.now() + 20 * 60 * 1000);
+
+            if (expirationDate < twentyMinutesFromNow) {
+                var newToken = createJWT(tokenDecoded, req.fullUrl)
+                res.header('auth-token', newToken.token)
+                res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded))
+                next();
+            }
+            else {
+                return res.sendStatus(403);
+            }
+        });
+    } else {
+        res.sendStatus(401);
+    }
+};
+
+function createJWT(account, source) {
+    // Payload
+    const tokenDecoded = {
+        username: account.username,
+        roles: account.roles,
+        aud: 'mPersona-node',
+        iss: source,
+        nbf: Math.floor(Date.now() / 1000),
+        jti: uuidv4(),
+        iat: Math.floor(Date.now() / 1000), // current time in seconds
+        exp: Math.floor(Date.now() / 1000) + (120 * 60) // expiry time in seconds (120 minutes from now)
+    };
+
+    // Create JWT
+    const token = jwt.sign(tokenDecoded, process.env.JWT_SECRET);
+    return { token, tokenDecoded };
 }
 
-module.exports = { verify }
+module.exports = { validateAndRenewToken, createJWT };
+
