@@ -88,10 +88,9 @@ wss.on('connection', (ws) => {
 
   // Handle messages received from clients
   ws.on('message', (message) => {
-    // console.log('Received:', message);
-
+ 
     // Send a message back to the client
-    // ws.send('Hello from the server!');
+    ws.send(JSON.stringify({message:'Received'}));
   });
 });
 
