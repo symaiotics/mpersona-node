@@ -80,7 +80,9 @@ exports.createNewAccount = async function (req, res, next) {
 
 // Accepts a new account and saves it to the database
 exports.login = async function (req, res, next) {
+try
 
+{
     //Variables
     var username = req.body.username || req.query.username || req.params.username || null;
     var password = req.body.password || req.query.password || req.params.password || null;
@@ -128,8 +130,13 @@ exports.login = async function (req, res, next) {
                 //TODO Insert token into logins collection
 
                 //Return a successful login
-                res.status(200).send(JSON.stringify({ message: "success", payload: { token: newToken.token, tokenDecoded: newToken.tokenDecoded } }))
+                res.status(200).send(JSON.stringify({ message: "Success", payload: null }))
             }
         });
     }
+}
+catch(error)
+{
+    console.log(error)
+}
 };

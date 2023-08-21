@@ -159,8 +159,17 @@ const PersonaSchema = new Schema({
         type: [ReferenceBlockSchema],
         default: []
     },
-
     //Administrative 
+
+    editors: {
+        type: Array,
+        default: []
+    },
+    viewers: {
+        type: Array,
+        default: []
+    },
+
     createdBy: {
         type: String,
         required: false

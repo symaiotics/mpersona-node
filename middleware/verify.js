@@ -20,35 +20,41 @@ const uuidv4 = require('uuid').v4;
 //     }
 // };
 
-const validateAndRenewToken = (req, res, next) => {
-    const authHeader = req.headers.authorization;
 
+const checkAndAssignToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
     if (authHeader) {
         const token = authHeader.split(' ')[1];
         jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
             if (err) {
-                return res.sendStatus(403);
+                // return res.sendStatus(403);
             }
-
-            req.user = user;
-            const tokenDecoded = jwt.decode(token);
-
-            //If the token is about to explore within 20 minutes generate a new token and attach it as a response header
-            const expirationDate = new Date(tokenDecoded.exp * 1000);
-            const twentyMinutesFromNow = new Date(Date.now() + 20 * 60 * 1000);
-
-            if (expirationDate < twentyMinutesFromNow) {
-                var newToken = createJWT(tokenDecoded, req.fullUrl)
-                res.header('auth-token', newToken.token)
-                res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded))
-                next();
-            }
-            else {
-                return res.sendStatus(403);
-            }
+            req.token = token;
+            req.tokenDecoded = jwt.decode(token);
         });
-    } else {
-        res.sendStatus(401);
+    }
+    next();
+
+};
+
+const validateAndRenewToken = (req, res, next) => {
+
+    //If the token has been decoded and is good, then we can proceed
+    //We also mint a new token if it is expiring
+    if (req.tokenDecoded) {
+
+        //If the token is about to explore within 20 minutes generate a new token and attach it as a response header
+        const expirationDate = new Date(req.tokenDecoded.exp * 1000);
+        const twentyMinutesFromNow = new Date(Date.now() + 20 * 60 * 1000);
+        if (expirationDate < twentyMinutesFromNow) {
+            var newToken = createJWT(req.tokenDecoded, req.fullUrl)
+            res.header('auth-token', newToken.token)
+            res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded))
+            next();
+        }
+    }
+    else {
+        return res.sendStatus(403);
     }
 };
 
@@ -70,5 +76,5 @@ function createJWT(account, source) {
     return { token, tokenDecoded };
 }
 
-module.exports = { validateAndRenewToken, createJWT };
+module.exports = { checkAndAssignToken, validateAndRenewToken, createJWT };
 

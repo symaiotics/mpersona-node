@@ -1,13 +1,15 @@
 var router = require('express').Router();
-const validateAndRenewToken = require('../middleware/verify').validateAndRenewToken;
+const {checkAndAssignToken, validateAndRenewToken} = require('../middleware/verify');
+
 //Import the controller(s)
 const accountsController = require('../controllers/accounts');
 
-router.post('/', accountsController.createNewAccount);
+router.post('/',  accountsController.createNewAccount);
 router.post('/login', accountsController.login);
+// router.get('/login', accountsController.login);
 // router.post('/requestPasswordReset', accountsController.requestPasswordReset);
 // router.post('/doPasswordReset', accountsController.doPasswordReset);
-// router.post('/logout', [validateToken], accountsController.logout);
+// router.post('/logout', [checkAndAssignToken], accountsController.logout);
 // router.delete('/', [validateToken], accountsController.deleteAccount);
 
 //export the router back to the index.js page

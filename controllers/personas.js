@@ -8,7 +8,25 @@ const Persona = require('../models/Persona');
 // Accepts a new account and saves it to the database
 exports.getPersonas = async function (req, res, next) {
     try {
-        var personas = await Persona.find({ status: 'active' })
+
+        //Get the public
+        var query = { status: 'active', createdBy: 'public' };
+        if (req.tokenDecoded) {
+            query = {
+                status: 'active',
+                $or: [
+                    { editors: req.tokenDecoded.username },
+                    { viewers: req.tokenDecoded.username },
+                    { createdBy: req.tokenDecoded.username },
+                    { createdBy: 'public' }
+
+                ]
+            }
+        }
+
+        // console.log(query)
+
+        var personas = await Persona.find(query)
         res.status(201).send({ message: "Here are all the active personas", payload: personas });
     } catch (error) {
         res.status(400).send(error);
@@ -82,6 +100,17 @@ exports.getSkills = async function (req, res, next) {
 exports.createPersonas = async function (req, res, next) {
     try {
         var personas = req.body.personas || req.query.personas || [];
+        if (!Array.isArray(personas)) personas = [personas];
+
+        //Set the person who created this persona, if applicable
+        personas.forEach((persona) => {
+            if (req.tokenDecoded) {
+                persona.createdBy = req.tokenDecoded.username;
+                persona.editors = [req.tokenDecoded.username];
+                persona.viewers = [req.tokenDecoded.username];
+            }
+        })
+
         var results = await Persona.insertMany(personas)
         console.log("Results", results)
         //Get the first persona inserted and return it;
