@@ -11,6 +11,10 @@ router.get('/categories', [checkAndAssignToken], personaController.getCategories
 
 //Create
 router.post('/', [checkAndAssignToken], personaController.createPersonas);
+router.post('/update', [checkAndAssignToken, validateAndRenewToken], personaController.updatePersonas);
+
+//Avatar
+router.post('/avatar', [checkAndAssignToken], personaController.createAvatar);
 
 //Delete
 router.get('/delete', [checkAndAssignToken, validateAndRenewToken], personaController.deletePersona);

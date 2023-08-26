@@ -127,6 +127,11 @@ const PersonaSchema = new Schema({
         required: true,
         default: "New Persona"
     },
+    url: {
+        type: String,
+        required: false,
+        default: null
+    },
     description: {
         en: {
             type: String,
