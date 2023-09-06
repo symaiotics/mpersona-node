@@ -33,6 +33,7 @@ const checkAndAssignToken = (req, res, next) => {
             req.tokenDecoded = jwt.decode(token);
         });
     }
+    // console.log("OK req.token", req.token)
     next();
 
 };
@@ -50,8 +51,11 @@ const validateAndRenewToken = (req, res, next) => {
             var newToken = createJWT(req.tokenDecoded, req.fullUrl)
             res.header('auth-token', newToken.token)
             res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded))
-            next();
+
+
         }
+        // console.log("OK Validated", req.token)
+        next();
     }
     else {
         return res.sendStatus(403);

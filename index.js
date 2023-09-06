@@ -23,6 +23,10 @@ app.use('/accounts', require('./routes/accounts'));
 //Generate prompts
 app.use('/prompts', require('./routes/prompts'));
 
+//Upload files
+app.use('/files', require('./routes/files'));
+
+
 //Establish a 404 Not Found Custom Response
 app.use((req, res,next)=>{
     const error = new Error('This site was not found. Perhaps you want to call login?');

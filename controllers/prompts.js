@@ -2,7 +2,6 @@
 //Import WSS.
 const { wss } = require("../config/app.js");
 
-const { Configuration, OpenAIApi } = require("openai");
 
 //Load the specific controller plugins
 const ApiError = require('../error/ApiError');
@@ -10,6 +9,7 @@ const uuidv4 = require('uuid').v4;
 const promiseHandler = require('../error/promiseHandler');
 
 
+const { Configuration, OpenAIApi } = require("openai");
 const configuration = new Configuration({
     apiKey: process.env.OPENAI_API_KEY,
 });

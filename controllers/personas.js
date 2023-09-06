@@ -176,18 +176,24 @@ exports.updatePersonas = async function (req, res, next) {
         var personas = req.body.personas || req.query.personas || [];
         if (!Array.isArray(personas)) personas = [personas];
         var updatedPersonas = [];
+        // console.log("Update  Personas", personas)
         personas.forEach(async (persona) => {
             const { _id, ...updateData } = persona;
-            var results = await Persona.findOneAndUpdate(
-                {
-                    _id: _id,
-                    $or: [
-                        { editors: req.tokenDecoded.username },
-                        { createdBy: req.tokenDecoded.username }, //does it matter who the creator was?
-                    ]
+            var updateParams =
+            {
+                _id: _id,
+                $or: [
+                    { editors: req.tokenDecoded.username },
+                    { createdBy: req.tokenDecoded.username }, //does it matter who the creator was?
+                ]
 
-                }, { $set: updateData }, { new: true }
+            };
+            console.log("updateParams", updateParams)
+            console.log("updateData", updateData)
+            var results = await Persona.findOneAndUpdate(
+                updateParams, { $set: updateData }, { new: true }
             )
+            console.log("Results", results)
             updatedPersonas.push((results))
         })
 

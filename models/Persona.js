@@ -165,7 +165,10 @@ const PersonaSchema = new Schema({
         default: []
     },
     //Administrative 
-
+    owners: {
+        type: Array,
+        default: []
+    },
     editors: {
         type: Array,
         default: []

@@ -23,6 +23,9 @@ The application also requires environment variables to operate
 - JWT_SECRET= //A secret for signing JWT tokens
 - MPERSONA_ATLAS= //A connection string to a valid MongoDB instance. I recommend using an Atlas instance
 - OPEN_API_KEY= //Your API key to interact with your own instance of OpenAI's API
+- AZURE_STORAGE_CONNECTION_STRING = //Your Azure Storage connection string (not key)
+
+The storage account requires a container named /images to be created and publicly accessible as read only.
 
 ## License
 Licensed under MIT. ALl private and commercial uses applicable.
