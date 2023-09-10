@@ -1,6 +1,6 @@
 
 //Import WSS.
-const { wss } = require("../config/app.js");
+const { wss, sendToClient } = require("../config/app.js");
 
 
 //Load the specific controller plugins
@@ -57,8 +57,6 @@ exports.simplePrompt = async function (req, res, next) {
         // const chat_completion = await openai.createChatCompletion(fullPrompt);
 
         const responseStream = await openai.createChatCompletion(fullPrompt, { responseType: 'stream' });
-
-
 
         var combinedResponse = "";
         responseStream.data.on('data', data => {
