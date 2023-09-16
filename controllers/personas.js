@@ -44,7 +44,7 @@ exports.getPersonas = async function (req, res, next) {
 
         // console.log(query)
 
-        var personas = await Persona.find(query)
+        var personas = await Persona.find(query).select("-editors -viewers -owners -createdBy");
         res.status(201).send({ message: "Here are all the active personas", payload: personas });
     } catch (error) {
         res.status(400).send(error);

@@ -9,7 +9,7 @@ const WorkStreamSchema = new Schema({
         required: true,
         default: uuidv4
     },
-
+    
     //Textual description
     name: {
         type: String,

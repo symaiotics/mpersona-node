@@ -23,7 +23,7 @@ exports.getWorkStreams = async function (req, res, next) {
             }
         }
 
-        var workStreams = await WorkStream.find(query)
+        var workStreams = await WorkStream.find(query).select("-editors -viewers -owners -createdBy");
         res.status(201).send({ message: "Here are all the work streams", payload: workStreams });
     } catch (error) {
         res.status(400).send(error);
@@ -37,6 +37,7 @@ exports.createWorkStreams = async function (req, res, next) {
 
         //Set the person who created this Work Stream, if applicable
         workStreams.forEach((workStream) => {
+            workStream.createdBy = 'public';
             if (req.tokenDecoded) {
                 workStream.createdBy = req.tokenDecoded.username;
                 workStream.owners = [req.tokenDecoded.username];
