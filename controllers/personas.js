@@ -26,30 +26,56 @@ const upload = multer({ storage: multer.memoryStorage() });
 // Accepts a new account and saves it to the database
 exports.getPersonas = async function (req, res, next) {
     try {
-
-        //Get the public
+        // Get the public
         var query = { status: 'active', createdBy: 'public' };
-        if (req.tokenDecoded) {
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
+
+        if (username) {
             query = {
                 status: 'active',
                 $or: [
-                    { editors: req.tokenDecoded.username },
-                    { viewers: req.tokenDecoded.username },
-                    { createdBy: req.tokenDecoded.username },
+                    { editors: username },
+                    { viewers: username },
+                    { owners: username },  // Added owners field here
+                    { createdBy: username },
                     { createdBy: 'public' }
-
                 ]
             }
         }
 
-        // console.log(query)
+        var aggregation = [
+            { $match: query },
+            {
+                $addFields: {
+                    isEditor: username !== null ? { $in: [ username, { $ifNull: [ "$editors", [] ] } ] } : false,
+                    isViewer: username !== null ? { $in: [ username, { $ifNull: [ "$viewers", [] ] } ] } : false,
+                    isOwner: username !== null ? { $in: [ username, { $ifNull: [ "$owners", [] ] } ] } : false,
+                    isCreatedBy: username !== null ? { $eq: [ username, "$createdBy" ] } : false,
+                }
+            },
+            {
+                $project: {
+                    editors: 0,
+                    viewers: 0,
+                    owners: 0,
+                    createdBy: 0
+                }
+            }
+        ];
 
-        var personas = await Persona.find(query).select("-editors -viewers -owners -createdBy");
-        res.status(201).send({ message: "Here are all the active personas", payload: personas });
+        var personas = await Persona.aggregate(aggregation);
+
+        if (personas.length > 0) {
+            res.status(200).send({ message: "Here are all the active personas", payload: personas });
+        } else {
+            res.status(404).send({ message: "No active personas found", payload: [] });
+        }
     } catch (error) {
+        console.log(error);
         res.status(400).send(error);
     }
 };
+
 
 // Gets all the unique categories from the personas
 exports.getCategories = async function (req, res, next) {
