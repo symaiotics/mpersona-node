@@ -17,9 +17,13 @@ router.post('/update', [checkAndAssignToken, validateAndRenewToken], personaCont
 router.post('/avatar', [checkAndAssignToken], personaController.createAvatar);
 
 //Delete
-router.get('/delete', [checkAndAssignToken, validateAndRenewToken], personaController.deletePersona);
-router.get('/deleteall', [checkAndAssignToken, validateAndRenewToken], personaController.deleteAllPersonas);
+// router.get('/delete', [checkAndAssignToken, validateAndRenewToken], personaController.deletePersona);
+// router.get('/deleteall', [checkAndAssignToken, validateAndRenewToken], personaController.deleteAllPersonas);
 
+//Link personas
+router.post('/addLink', [checkAndAssignToken, validateAndRenewToken], personaController.addLink);
+router.post('/linkDetails', [checkAndAssignToken, validateAndRenewToken], personaController.linkDetails);
+router.post('/acceptLink', [checkAndAssignToken, validateAndRenewToken], personaController.acceptLink);
 
 //export the router back to the index.js page
 module.exports = router;

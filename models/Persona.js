@@ -178,6 +178,13 @@ const PersonaSchema = new Schema({
         default: []
     },
 
+    viewerLink: {
+        type: String,
+    },
+    editorLink: {
+        type: String,
+    },
+
     createdBy: {
         type: String,
         required: false

@@ -47,10 +47,10 @@ exports.getPersonas = async function (req, res, next) {
             { $match: query },
             {
                 $addFields: {
-                    isEditor: username !== null ? { $in: [ username, { $ifNull: [ "$editors", [] ] } ] } : false,
-                    isViewer: username !== null ? { $in: [ username, { $ifNull: [ "$viewers", [] ] } ] } : false,
-                    isOwner: username !== null ? { $in: [ username, { $ifNull: [ "$owners", [] ] } ] } : false,
-                    isCreatedBy: username !== null ? { $eq: [ username, "$createdBy" ] } : false,
+                    isEditor: username !== null ? { $in: [username, { $ifNull: ["$editors", []] }] } : false,
+                    isViewer: username !== null ? { $in: [username, { $ifNull: ["$viewers", []] }] } : false,
+                    isOwner: username !== null ? { $in: [username, { $ifNull: ["$owners", []] }] } : false,
+                    isCreatedBy: username !== null ? { $eq: [username, "$createdBy"] } : false,
                 }
             },
             {
@@ -253,3 +253,123 @@ exports.deleteAllPersonas = async function (req, res, next) {
     }
 };
 
+
+// Gets all the unique details from the link provided
+
+
+exports.addLink = async function (req, res, next) {
+    try {
+
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
+
+        var personaId = req.body.personaId || req.query.personaId || "";
+        var personaLink = req.body.personaLink || req.query.personaLink || "";
+        var linkType = req.body.linkType || req.query.linkType || "";
+
+        console.log({username, personaId, personaLink, linkType})
+        if (!username) {
+            return res.status(400).send({ message: "Username not found in token" });
+        }
+
+        var update = {};
+
+        if (linkType === 'editorLink') {
+            update.editorLink = personaLink;
+        } else if (linkType === 'viewerLink') {
+            update.viewerLink = personaLink;
+        } else {
+            return res.status(400).send({ message: "Invalid linkType" });
+        }
+
+        var query = {
+            _id: personaId,
+            $or: [
+                { editors: username },
+                { owners: username }
+            ]
+        };
+
+        var updatedPersona = await Persona.updateOne(query, update);
+
+        if (updatedPersona.nModified === 0) {
+            return res.status(400).send({ message: "Unable to update. Ensure you have the right permissions." });
+        }
+
+        res.status(201).send({
+            message: "Link Added to persona",
+            payload: updatedPersona
+        });
+
+    } catch (error) {
+        console.log("Error", error)
+        res.status(400).send(error);
+    }
+};
+
+
+
+// Gets all the unique details from the link provided
+exports.linkDetails = async function (req, res, next) {
+    try {
+
+        var personaLink = req.body.personaLink || req.query.personaLink || "";
+        var persona = await Persona.findOne({ $or: [{ editorLink: personaLink }, { viewerLink: personaLink }] })
+            .select('name description url editorLink viewerLink');
+
+        if (persona) {
+            persona = persona.toObject();
+            persona.isEditor = persona.editorLink === personaLink;
+            persona.isViewer = persona.viewerLink === personaLink;
+            delete persona.editorLink;
+            delete persona.viewerLink;
+
+            res.status(201).send({
+                message: "Here is the persona",
+                payload: persona
+            });
+        } else {
+            res.status(404).send({ message: "Persona not found" });
+        }
+    } catch (error) {
+        console.log("Error", error)
+        res.status(400).send(error);
+    }
+};
+
+//accept persona from the link
+exports.acceptLink = async function (req, res, next) {
+    try {
+        var personaLink = req.body.personaLink || req.query.personaLink || "";
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
+
+        if (!username) {
+            return res.status(400).send({ message: "Username not found in token" });
+        }
+
+        var persona = await Persona.findOne({ $or: [{ editorLink: personaLink }, { viewerLink: personaLink }] })
+            .select('editorLink viewerLink');
+
+        if (!persona) {
+            return res.status(404).send({ message: "Persona not found" });
+        }
+
+        var update = {};
+
+        if (persona.editorLink === personaLink) {
+            update.$addToSet = { editors: username };
+        } else if (persona.viewerLink === personaLink) {
+            update.$addToSet = { viewers: username };
+        }
+
+        await Persona.updateOne({ _id: persona._id }, update);
+
+        res.status(201).send({
+            message: "Persona link accepted"
+        });
+
+    } catch (error) {
+        console.log("Error", error)
+
+        res.status(400).send(error);
+    }
+};
