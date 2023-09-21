@@ -13,49 +13,121 @@ const pdf = require('pdf-parse');
 const upload = require('../services/upload');
 const { uploadToAzure } = require('../services/azure-storage');
 
-//Receive files uploaded from the front-end
+
+
+
 exports.uploadFiles = [upload.array('files'), async function (req, res, next) {
 
-    console.log("Upload Files")
-    //Step 1 - Get the files in Multer added to req.files
-    //Parse the files, done in the middleare above.
+    var uuids = req.body.uuids || req.query.uuids || [];
+    if (!Array.isArray(uuids)) uuids = JSON.parse(uuids);
+    console.log(uuids);
+    const filesSuccess = [];
+    const filesFailure = [];
 
-    //Step 2 - Save the originals for future reference
-    // const files = req.files;
-    for (let file of req.files) {
-        console.log("Uploading to azure", file.filename)
+    // Uploading files to Azure
+    await Promise.all(req.files.map(async (file) => {
+        console.log("Uploading to azure", file.filename);
         await uploadToAzure(file, 'files');
-    }
+        file.storageUrl = 'files/' + file.filename;
+    }));
 
-    //Step 3 - Generate text files from each of them
-    const results = [];
-    for (let file of req.files) {
-        let extractedText = '';
+    // Extracting text from files
+    await Promise.all(req.files.map(async (file, index) => {
+        let extractedFileText = '';
         try {
             if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
-                extractedText = await extractTextFromDocx(file.path);
+                extractedFileText = await extractTextFromDocx(file.path);
             } else if (file.mimetype === 'text/plain') {
-                extractedText = fs.readFileSync(file.path, 'utf8');
+                extractedFileText = await fs.readFile(file.path, 'utf8');
             } else if (file.mimetype === 'application/json') {
-                extractedText = fs.readFileSync(file.path, 'utf8');
+                extractedFileText = await fs.readFile(file.path, 'utf8');
             } else if (file.mimetype === 'text/html') {
-                extractedText = extractTextFromHTML(fs.readFileSync(file.path, 'utf8'));
+                extractedFileText = await extractTextFromHTML(fs.readFileSync(file.path, 'utf8'));
             } else if (file.mimetype === 'application/pdf') {
-                extractedText = await extractTextFromPdf(file.path);
+                extractedFileText = await extractTextFromPdf(file.path);
             }
-            results.push({ filename: file.originalname, mime: file.mimetype, content: extractedText });
+            var successObj = { uuid: uuids[index], name: file.filename, mimetype: file.mimetype, extractedFileText: extractedFileText, storageUrl: file.storageUrl };
+            console.log("Success", successObj);
+            filesSuccess.push(successObj);
         } catch (error) {
-            results.push({ filename: file.originalname, mime: null, content: null, error: "Failed to process" });
+            console.log("Error", error);
+            filesFailure.push({ uuid: uuids[index], name: file.filename, mimetype: null, extractedFileText: null, storageUrl: file.storageUrl, error: "Failed to process" });
         } finally {
             // Clean up the uploaded files
             fs.unlinkSync(file.path);
         }
-    }
+    }));
 
-    //Return the results
-    res.status(201).send({ message: "Files uploaded", payload: results });
-
+    res.status(201).send({
+        message: "Here are the processed files",
+        payload: filesSuccess
+    });
 }];
+
+
+
+// //Receive files uploaded from the front-end
+// exports.uploadFiles = [upload.array('files'), async function (req, res, next) {
+
+//     var uuids = req.body.uuids || req.query.uuids || [];
+//     if (!Array.isArray(uuids)) uuids = JSON.parse(uuids)
+//     console.log(uuids)
+//     const filesSuccess = [];
+//     const filesFailure = [];
+
+//     //Step 1 - Get the files in Multer added to req.files
+//     //Parse the files, done in the middleare above.
+
+//     //Step 2 - Save the originals for future reference
+//     // const files = req.files;
+//     req.files.forEach(async (file, index, origArray) => {
+//         console.log("Uploading to azure", file.filename)
+//         await uploadToAzure(file, 'files');
+//         file.storageUrl = 'files/' + file.filename;
+//         // console.log("Upload response", uploadResponse)
+//     })
+
+//     //Step 3 - Generate text files from each of them
+
+//     req.files.forEach(async (file, index, origArray) => {
+
+//         console.log(index, file)
+//         //    for (let file of req.files) {
+//         let extractedFileText = '';
+//         try {
+//             if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
+//                 extractedFileText = await extractTextFromDocx(file.path);
+//             } else if (file.mimetype === 'text/plain') {
+//                 extractedFileText = await fs.readFile(file.path, 'utf8');
+//             } else if (file.mimetype === 'application/json') {
+//                 extractedFileText = await fs.readFile(file.path, 'utf8');
+//             } else if (file.mimetype === 'text/html') {
+//                 extractedFileText = await extractTextFromHTML(fs.readFileSync(file.path, 'utf8'));
+//             } else if (file.mimetype === 'application/pdf') {
+//                 extractedFileText = await extractTextFromPdf(file.path);
+//             }
+//             var successObj = { uuid: uuids[index], name: file.filename, mimetype: file.mimetype, extractedFileText: extractedFileText, storageUrl: file.storageUrl }
+//             console.log("Success", successObj)
+//             filesSuccess.push(successObj);
+//         } catch (error) {
+//             console.log("Error", error)
+//             filesFailure.push({ uuid: uuids[index], name: file.filename, mimetype: null, extractedFileText: null, storageUrl: file.storageUrl, error: "Failed to process" });
+//         } finally {
+//             // Clean up the uploaded files
+//             fs.unlinkSync(file.path);
+
+//         }
+//     })
+
+
+//     res.status(201).send({
+//         message: "Here are the processed files",
+//         payload: filesSuccess
+//     });
+
+
+
+// }];
 
 async function extractTextFromDocx(filePath) {
     const result = await mammoth.extractRawText({ path: filePath });
@@ -63,20 +135,36 @@ async function extractTextFromDocx(filePath) {
 }
 
 function extractTextFromHTML(html) {
-    const dom = new JSDOM(html);
 
-    // Remove all <script> elements
-    const scriptElements = dom.window.document.querySelectorAll('script');
-    scriptElements.forEach(script => script.remove());
+    return new Promise((resolve, reject) => {
 
-    var textContent = dom.window.document.body.textContent
-    if (textContent.length) {
-        textContent = textContent.replaceAll(/\n\n/g, "")
-        textContent = textContent.replaceAll(/\s\s/g, " ")
-        // console.log("html", textContent)
-        return textContent
-    }
-    else return null;
+        try {
+
+
+            const dom = new JSDOM(html);
+
+            // Remove all <script> elements
+            const scriptElements = dom.window.document.querySelectorAll('script');
+            scriptElements.forEach(script => script.remove());
+
+            var textContent = dom.window.document.body.textContent
+            if (textContent.length) {
+                textContent = textContent.replaceAll(/\n\n/g, "")
+                textContent = textContent.replaceAll(/\s\s/g, " ")
+                // console.log("html", textContent)
+                resolve(textContent)
+            }
+            else resolve(null);
+
+        }
+        catch (error) {
+            reject(error)
+        }
+
+
+
+    })
+
 
 }
 

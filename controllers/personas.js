@@ -266,7 +266,7 @@ exports.addLink = async function (req, res, next) {
         var personaLink = req.body.personaLink || req.query.personaLink || "";
         var linkType = req.body.linkType || req.query.linkType || "";
 
-        console.log({username, personaId, personaLink, linkType})
+        console.log({ username, personaId, personaLink, linkType })
         if (!username) {
             return res.status(400).send({ message: "Username not found in token" });
         }

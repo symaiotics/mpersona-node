@@ -9,8 +9,8 @@ async function uploadToAzure(file, containerName) {
     // const filePath = path.join(__dirname, file.path); // Adjust the path if necessary
     // const filePath = path.join(__dirname, file.path);
     const filePath = path.join(process.cwd(), file.path);
-    
-    
+
+
     // Read the file to get its buffer
 
     console.log("fs.fileread", filePath)
@@ -21,7 +21,9 @@ async function uploadToAzure(file, containerName) {
         }
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
-        const blobClient = containerClient.getBlobClient(file.filename); // Using the filename as blob name
+        const currentMilliseconds = new Date().getTime();
+        const augmentedFilename = `${file.filename}_${currentMilliseconds}`;
+        const blobClient = containerClient.getBlobClient(augmentedFilename); // Using the augmented filename as blob name
         const blockBlobClient = blobClient.getBlockBlobClient();
 
         try {
@@ -33,9 +35,10 @@ async function uploadToAzure(file, containerName) {
             //         console.error('Failed to delete the local file', err);
             //     }
             // });
-            return uploadResponse;
+            console.log("Upload successful", uploadResponse)
+            return augmentedFilename;
         } catch (error) {
-            console.log("Error", error)
+            console.log("Error uploading", error)
             return error;
         }
 
