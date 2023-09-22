@@ -29,6 +29,9 @@ app.use('/files', require('./routes/files'));
 //Generate prompts
 app.use('/workStreams', require('./routes/workStreams'));
 
+//Facts
+app.use('/facts', require('./routes/facts'));
+
 
 //Establish a 404 Not Found Custom Response
 app.use((req, res,next)=>{

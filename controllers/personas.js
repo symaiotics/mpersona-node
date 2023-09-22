@@ -150,6 +150,7 @@ exports.createPersonas = async function (req, res, next) {
         personas.forEach((persona) => {
             if (req.tokenDecoded) {
                 persona.createdBy = req.tokenDecoded.username;
+                persona.owners = [req.tokenDecoded.username];
                 persona.editors = [req.tokenDecoded.username];
                 persona.viewers = [req.tokenDecoded.username];
             }

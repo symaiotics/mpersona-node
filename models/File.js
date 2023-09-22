@@ -1,20 +1,21 @@
+// models/Persona.js
 const { v4: uuidv4 } = require('uuid');
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const WorkStreamSchema = new Schema({
+const FileSchema = new Schema({
     uuid: {
         type: String,
         unique: false,
         required: true,
         default: uuidv4
     },
-    
+
     //Textual description
     name: {
         type: String,
         required: true,
-        default: "New Work Stream"
+        default: "New File"
     },
     description: {
         en: {
@@ -27,18 +28,61 @@ const WorkStreamSchema = new Schema({
         }
     },
 
-    stages: { //The array of stages including the personas
+    context: { 
+        type: String,
+        required: false
+    },
+    storageUrl: { 
+        type: String,
+        required: false
+    },
+
+    extractedFileText: { 
+        type: String,
+        required: false
+    },
+
+    status: { 
+        type: String,
+        required: false
+    },
+
+    highlights: { 
         type: Array,
-        required: true
+        required: false
+    },
+
+
+    lastSelection: { 
+        type: Object,
+        required: false
+    },
+
+    knowledgeProfileUuid: { 
+        type: String,
+        required: false
+    },
+
+    persona: { 
+        type: Object,
+        required: false
+    },
+
+    sockets: { 
+        type: Array,
+        required: false
+    },
+
+    facts: { 
+        type: Array,
+        required: false
     },
     
-    sessions: { //Object of the sessions within the Object as distinct UUIDs
-        type: Object,
-        required: true
+    triggerGeneration: { 
+        type: Boolean,
+        required: false
     },
 
-
-    //Administrative
     owners: {
         type: Array,
         default: []
@@ -55,12 +99,7 @@ const WorkStreamSchema = new Schema({
         type: String,
         required: false
     },
-    status: {
-        type: String,
-        enum: ['active', 'inactive'],
-        default: 'active',
-        required: true,
-    },
+    
     momentCreated: {
         type: Date,
         default: Date.now,
@@ -70,5 +109,5 @@ const WorkStreamSchema = new Schema({
 
 });
 
-const WorkStream = mongoose.model('WorkStream', WorkStreamSchema);
-module.exports = WorkStream;
+const File = mongoose.model('Files', FileSchema);
+module.exports = File;

@@ -13,6 +13,7 @@ const pdf = require('pdf-parse');
 const upload = require('../services/upload');
 const { uploadToAzure } = require('../services/azure-storage');
 
+const File = require('../models/File');
 
 
 
@@ -64,7 +65,60 @@ exports.uploadFiles = [upload.array('files'), async function (req, res, next) {
     });
 }];
 
+exports.createFiles = async function (req, res, next) {
+    try {
+        var files = req.body.files || req.query.files || [];
+        if (!Array.isArray(files)) files = [files];
+        console.log("Creating files", files)
+        //Set the person who created this file, if applicable
+        files.forEach((fact) => {
+            if (req.tokenDecoded) {
+                fact.createdBy = req.tokenDecoded.username;
+                fact.editors = [req.tokenDecoded.username];
+                fact.owners = [req.tokenDecoded.username];
+                fact.viewers = [req.tokenDecoded.username];
+            }
+        })
 
+        var results = await File.insertMany(files)
+        //Get the first persona inserted and return it;
+
+        res.status(201).send({ message: "Created all the identified files", payload: results });
+    } catch (error) {
+        console.log(error)
+        res.status(400).send(error);
+    }
+};
+
+exports.updateFiles = async function (req, res, next) {
+    try {
+        var files = req.body.files || req.query.files || [];
+        if (!Array.isArray(files)) files = [files];
+        var updatedFiles = [];
+
+        files.forEach(async (file) => {
+            const { uuid, ...updateData } = file;
+            var updateParams =
+            {
+                uuid: uuid,
+                $or: [
+                    { editors: req.tokenDecoded.username },
+                    { createdBy: req.tokenDecoded.username }, //does it matter who the creator was?
+                ]
+            };
+
+            var results = await File.findOneAndUpdate(
+                updateParams, { $set: updateData }, { new: true }
+            )
+            updatedFiles.push((results))
+        })
+
+        res.status(201).send({ message: "Here are your updated files", payload: updatedFiles });
+    } catch (error) {
+        console.log(error)
+        res.status(400).send(error);
+    }
+};
 
 // //Receive files uploaded from the front-end
 // exports.uploadFiles = [upload.array('files'), async function (req, res, next) {
