@@ -17,6 +17,13 @@ const FactSchema = new Schema({
         required: false
     },
 
+    //Reference knowledge profiles - Probably whole object not needed
+    knowledgeProfile: {
+        type: Object,
+        required: false
+    },
+
+
     //Reference file it came from
     fileUuid: {
         type: String,

@@ -30,6 +30,9 @@ app.use('/files', require('./routes/files'));
 app.use('/workStreams', require('./routes/workStreams'));
 
 //Facts
+app.use('/knowledgeProfiles', require('./routes/knowledgeProfiles'));
+
+//Facts
 app.use('/facts', require('./routes/facts'));
 
 

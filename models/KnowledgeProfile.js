@@ -41,17 +41,7 @@ const KnowledgeProfileSchema = new Schema({
     //Structure of the knowledge
     //Gained through the analysis of files. Each file further contains this information
     //This represents the combination of their structures, or a global structure which might span multiple files
-    sourceStructure: {
-        type: String,
-        required: false
-    },
-    sourceAnalysisStatus: { type: String, required: false },
-    targetStructure: {
-        type: String,
-        required: false
-    },
-    targetAnalysisStatus: { type: String, required: false },
-
+     
     owners: {
         type: Array,
         default: []

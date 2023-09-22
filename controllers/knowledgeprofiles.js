@@ -44,17 +44,20 @@ exports.createKnowledgeProfiles = async function (req, res, next) {
     try {
         var knowledgeProfiles = req.body.knowledgeProfiles || req.query.knowledgeProfiles || [];
         if (!Array.isArray(knowledgeProfiles)) knowledgeProfiles = [knowledgeProfiles];
-
+        
         //Set the person who created this knowledge profile, if applicable
         knowledgeProfiles.forEach((kp) => {
             if (req.tokenDecoded) {
                 kp.owners = [req.tokenDecoded.username];
+                kp.viewers = [req.tokenDecoded.viewers];
+                kp.editors = [req.tokenDecoded.username];
                 kp.createdBy = req.tokenDecoded.username;
             }
-            kp.active = "active "
+            kp.active = "active"
         })
 
         var results = await KnowledgeProfile.insertMany(knowledgeProfiles)
+        console.log("Create Knowledge Profile", results)
         res.status(201).send({ message: "Created all the identified knowledge profiles", payload: results });
     } catch (error) {
         console.log(error)

@@ -63,6 +63,12 @@ const FileSchema = new Schema({
         required: false
     },
 
+    //Reference knowledge profiles - Probably whole object not needed
+    knowledgeProfile: {
+        type: Object,
+        required: false
+    },
+
     persona: { 
         type: Object,
         required: false
