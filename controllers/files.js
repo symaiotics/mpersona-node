@@ -5,6 +5,7 @@
 
 //File reading libraries
 const fs = require('fs');
+const fsp = require('fs').promises;
 const mammoth = require('mammoth');
 const { JSDOM } = require('jsdom');
 const pdf = require('pdf-parse');
@@ -39,9 +40,9 @@ exports.uploadFiles = [upload.array('files'), async function (req, res, next) {
             if (file.mimetype === 'application/vnd.openxmlformats-officedocument.wordprocessingml.document') {
                 extractedFileText = await extractTextFromDocx(file.path);
             } else if (file.mimetype === 'text/plain') {
-                extractedFileText = await fs.readFile(file.path, 'utf8');
+                extractedFileText = await fsp.readFile(file.path, 'utf8');
             } else if (file.mimetype === 'application/json') {
-                extractedFileText = await fs.readFile(file.path, 'utf8');
+                extractedFileText = await fsp.readFile(file.path, 'utf8');
             } else if (file.mimetype === 'text/html') {
                 extractedFileText = await extractTextFromHTML(fs.readFileSync(file.path, 'utf8'));
             } else if (file.mimetype === 'application/pdf') {
