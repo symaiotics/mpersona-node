@@ -101,6 +101,7 @@ exports.searchFacts = async function (req, res, next) {
 
         res.status(201).send({ message: "Search Results", payload: results });
     } catch (err) {
+        console.log(err)
         res.status(500).json({ error: 'Internal Server Error' });
     }
 
