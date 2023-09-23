@@ -21,9 +21,9 @@ async function uploadToAzure(file, containerName) {
         }
 
         const containerClient = blobServiceClient.getContainerClient(containerName);
-        const currentMilliseconds = new Date().getTime();
-        const augmentedFilename = `${file.filename}_${currentMilliseconds}`;
-        const blobClient = containerClient.getBlobClient(augmentedFilename); // Using the augmented filename as blob name
+        // const currentMilliseconds = new Date().getTime();
+        // const augmentedFilename = `${file.filename}_${currentMilliseconds}`;
+        const blobClient = containerClient.getBlobClient(file.filename); // Using the augmented filename as blob name
         const blockBlobClient = blobClient.getBlockBlobClient();
 
         try {

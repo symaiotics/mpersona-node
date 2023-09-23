@@ -9,6 +9,7 @@ router.get('/', [checkAndAssignToken, validateAndRenewToken], factController.get
 
 //Create
 router.post('/', [checkAndAssignToken, validateAndRenewToken], factController.createFacts);
+router.post('/search', [checkAndAssignToken, validateAndRenewToken], factController.searchFacts);
 
 //export the router back to the index.js page
 module.exports = router;

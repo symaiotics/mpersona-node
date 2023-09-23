@@ -54,6 +54,20 @@ const KnowledgeProfileSchema = new Schema({
         type: Array,
         default: []
     },
+
+    ownerLink: {
+        type: String,
+    },
+
+    editorLink: {
+        type: String,
+    },
+
+    viewerLink: {
+        type: String,
+    },
+
+
     createdBy: {
         type: String,
         required: false

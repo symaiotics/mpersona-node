@@ -177,11 +177,15 @@ const PersonaSchema = new Schema({
         type: Array,
         default: []
     },
-
-    viewerLink: {
+    ownerLink: {
         type: String,
     },
+
     editorLink: {
+        type: String,
+    },
+
+    viewerLink: {
         type: String,
     },
 

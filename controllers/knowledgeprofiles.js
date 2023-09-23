@@ -17,9 +17,9 @@ const openai = new OpenAIApi(configuration);
 // Gets the Knowledge Profiles which are public 
 exports.getKnowledgeProfiles = async function (req, res, next) {
     try {
+        let query = { status: 'active', createdBy: 'public' };
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
 
-        //Get the public knowledge profiles
-        var query = { status: 'active', createdBy: 'public' };
         if (req.tokenDecoded) {
             query = {
                 status: 'active',
@@ -27,15 +27,61 @@ exports.getKnowledgeProfiles = async function (req, res, next) {
                     { owners: req.tokenDecoded.username },
                     { editors: req.tokenDecoded.username },
                     { viewers: req.tokenDecoded.username },
-                    // { createdBy: req.tokenDecoded.username },
                     { createdBy: 'public' }
-
                 ]
-            }
+            };
         }
-        var results = await KnowledgeProfile.find(query)
+
+        const aggregation = [
+            { $match: query },
+            // Add isEditor, isViewer, isOwner, isCreatedBy fields
+            {
+                $addFields: {
+                    isEditor: username !== null ? { $in: [username, { $ifNull: ["$editors", []] }] } : false,
+                    isViewer: username !== null ? { $in: [username, { $ifNull: ["$viewers", []] }] } : false,
+                    isOwner: username !== null ? { $in: [username, { $ifNull: ["$owners", []] }] } : false,
+                    isCreatedBy: username !== null ? { $eq: [username, "$createdBy"] } : false,
+                }
+            },
+            // Join with Files collection
+            {
+                $lookup: {
+                    from: "files",
+                    localField: "uuid",
+                    foreignField: "knowledgeProfileUuid",
+                    as: "files"
+                }
+            },
+            // Join with Facts collection
+            {
+                $lookup: {
+                    from: "facts",
+                    localField: "uuid",
+                    foreignField: "knowledgeProfileUuid",
+                    as: "facts"
+                }
+            },
+            // Project the desired fields and counts
+            {
+                $project: {
+                    uuid: 1,
+                    name: 1,
+                    description: 1,
+                    isEditor: 1,
+                    isViewer: 1,
+                    isOwner: 1,
+                    isCreatedBy: 1,
+                    filesCount: { $size: "$files" },
+                    factsCount: { $size: "$facts" }
+                }
+            }
+        ];
+
+        const results = await KnowledgeProfile.aggregate(aggregation);
+
         res.status(201).send({ message: "Here are all the active knowledge profiles", payload: results });
     } catch (error) {
+        console.log("Error", error)
         res.status(400).send(error);
     }
 };
@@ -44,7 +90,7 @@ exports.createKnowledgeProfiles = async function (req, res, next) {
     try {
         var knowledgeProfiles = req.body.knowledgeProfiles || req.query.knowledgeProfiles || [];
         if (!Array.isArray(knowledgeProfiles)) knowledgeProfiles = [knowledgeProfiles];
-        
+
         //Set the person who created this knowledge profile, if applicable
         knowledgeProfiles.forEach((kp) => {
             if (req.tokenDecoded) {

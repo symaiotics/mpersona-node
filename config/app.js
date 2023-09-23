@@ -232,7 +232,7 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
   }
   catch (error) {
     console.log("Error", error)
-    res.status(500).send({ message: "Prompt failure", payload: error })
+    // res.status(500).send({ message: "Prompt failure", payload: error })
   }
 }
 

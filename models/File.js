@@ -106,6 +106,19 @@ const FileSchema = new Schema({
         required: false
     },
     
+    ownerLink: {
+        type: String,
+    },
+
+    editorLink: {
+        type: String,
+    },
+
+    viewerLink: {
+        type: String,
+    },
+
+
     momentCreated: {
         type: Date,
         default: Date.now,

@@ -83,3 +83,25 @@ exports.createFacts = async function (req, res, next) {
         res.status(400).send(error);
     }
 };
+
+exports.searchFacts = async function (req, res, next) {
+
+
+    try {
+        const searchString = req.body.searchString || req.query.searchString || null;
+
+        if (!searchString) {
+            return res.status(400).json({ error: 'searchString parameter is required' });
+        }
+
+        const results = await Fact.find(
+            { $text: { $search: searchString } },
+            { score: { $meta: 'textScore' } }
+        ).sort({ score: { $meta: 'textScore' } });
+
+        res.status(201).send({ message: "Search Results", payload: results });
+    } catch (err) {
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
+
+}
