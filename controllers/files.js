@@ -72,12 +72,12 @@ exports.createFiles = async function (req, res, next) {
         if (!Array.isArray(files)) files = [files];
         console.log("Creating files", files)
         //Set the person who created this file, if applicable
-        files.forEach((fact) => {
+        files.forEach((file) => {
             if (req.tokenDecoded) {
-                fact.createdBy = req.tokenDecoded.username;
-                fact.editors = [req.tokenDecoded.username];
-                fact.owners = [req.tokenDecoded.username];
-                fact.viewers = [req.tokenDecoded.username];
+                file.createdBy = req.tokenDecoded.username;
+                file.editors = [req.tokenDecoded.username];
+                file.owners = [req.tokenDecoded.username];
+                file.viewers = [req.tokenDecoded.username];
             }
         })
 
@@ -120,6 +120,96 @@ exports.updateFiles = async function (req, res, next) {
         res.status(400).send(error);
     }
 };
+
+
+exports.getFiles = async function (req, res, next) {
+    try {
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
+        let knowledgeProfileUuid = req.body.knowledgeProfileUuid ? req.query.knowledgeProfileUuid : null;
+        let query = { status: 'active', createdBy: 'public' };
+
+        if (req.tokenDecoded) {
+            query = {
+                // status: 'active',
+                $or: [
+                    { owners: req.tokenDecoded.username },
+                    { editors: req.tokenDecoded.username },
+                    { viewers: req.tokenDecoded.username },
+                    { createdBy: 'public' }
+                ]
+            };
+        }
+
+        if(knowledgeProfileUuid) query.knowledgeProfileUuid = knowledgeProfileUuid;
+
+        console.log(query)
+        const aggregation = [
+            { $match: query },
+            // Add isEditor, isViewer, isOwner, isCreatedBy fields
+            {
+                $addFields: {
+                    isEditor: username !== null ? { $in: [username, { $ifNull: ["$editors", []] }] } : false,
+                    isViewer: username !== null ? { $in: [username, { $ifNull: ["$viewers", []] }] } : false,
+                    isOwner: username !== null ? { $in: [username, { $ifNull: ["$owners", []] }] } : false,
+                    isCreatedBy: username !== null ? { $eq: [username, "$createdBy"] } : false,
+                }
+            },
+            // Join with knowledgeProfiles collection
+            // {
+            //     $lookup: {
+            //         from: "knowledgeprofiles",
+            //         localField: "knowledgeProfileUuid",
+            //         foreignField: "uuid",
+            //         as: "knowledgeProfiles"
+            //     }
+            // },
+            // Join with Files collection
+            // {
+            //     $lookup: {
+            //         from: "facts",
+            //         localField: "factUuid",
+            //         foreignField: "uuid",
+            //         as: "facts"
+            //     }
+            // },
+            // Project the desired fields and counts
+            {
+                $project: {
+                    uuid: 1,
+                    name: 1,
+                    description: 1,
+                    context: 1,
+                    storageUrl: 1,
+                    extractedFileText: 1,
+                    status: 1,
+                    highlights: 1,
+                    lastSelection: 1,
+                    knowledgeProfileUuid: 1,
+                    knowledgeProfile: 1,
+                    persona: 1,
+                    sockets: 1,
+                    facts: 1,
+                    triggerGeneration: 1,
+
+                    isEditor: 1,
+                    isViewer: 1,
+                    isOwner: 1,
+                    isCreatedBy: 1,
+                    // knowledgeProfiles: '$knowledgeProfiles',
+                    // facts: "$facts" 
+                }
+            }
+        ];
+
+        const results = await File.aggregate(aggregation);
+console.log(results)
+        res.status(201).send({ message: "Here are all requested files", payload: results });
+    } catch (error) {
+        console.log("Error", error)
+        res.status(400).send(error);
+    }
+};
+
 
 // //Receive files uploaded from the front-end
 // exports.uploadFiles = [upload.array('files'), async function (req, res, next) {

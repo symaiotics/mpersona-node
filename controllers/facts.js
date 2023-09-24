@@ -84,25 +84,78 @@ exports.createFacts = async function (req, res, next) {
     }
 };
 
+
 exports.searchFacts = async function (req, res, next) {
-
-
     try {
         const searchString = req.body.searchString || req.query.searchString || null;
+        const knowledgeProfileUuids = req.body.knowledgeProfileUuids || req.query.knowledgeProfileUuids || null;
 
         if (!searchString) {
             return res.status(400).json({ error: 'searchString parameter is required' });
         }
 
-        const results = await Fact.find(
-            { $text: { $search: searchString } },
-            { score: { $meta: 'textScore' } }
-        ).sort({ score: { $meta: 'textScore' } });
+        // Initialize the query object with the text search condition
+        var query = { $text: { $search: searchString } };
 
-        res.status(201).send({ message: "Search Results", payload: results });
+        console.log("knowledgeProfileUuids", knowledgeProfileUuids)
+        // If knowledgeProfileUuids are provided, add an $in condition to the query
+        if (knowledgeProfileUuids && Array.isArray(knowledgeProfileUuids) && knowledgeProfileUuids.length > 0) {
+            query.knowledgeProfileUuid = { $in: knowledgeProfileUuids };
+        }
+        
+        console.log(query);
+
+        const results = await Fact.find(query, { score: { $meta: 'textScore' } })
+            .sort({ score: { $meta: 'textScore' } });
+
+        res.status(200).send({ message: "Search Results", payload: results });
     } catch (err) {
-        console.log(err)
+        console.log(err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
+}
 
+
+//Create text indexes automatically
+createTextIndex()
+
+async function createTextIndex() {
+    try {
+        // Retrieve the existing indexes for the collection
+        const indexes = await Fact.listIndexes();
+
+        // Define the index you want to create
+        const indexDefinition = {
+            keywords: 'text',
+            facts: 'text',
+            questions: 'text',
+            "knowledgeProfile.context": 'text',
+            "file.context": 'text',
+        };
+        const indexOptions = {
+            name: 'textIndex', // name of the index, optional but recommended
+            weights: {
+                keywords: 5,
+                facts: 5,
+                questions: 3,
+                "knowledgeProfile.context": 1,
+                "file.context": 1,
+            },
+        };
+
+        // Check if the index already exists
+        const indexExists = indexes.some(index => {
+            return index.name === indexOptions.name;
+        });
+
+        // If the index does not exist, create it
+        if (!indexExists) {
+            await Fact.collection.createIndex(indexDefinition, indexOptions);
+            console.log('Text index created successfully.');
+        } else {
+            console.log('Text index already exists.');
+        }
+    } catch (err) {
+        console.error('Error creating text index:', err);
+    }
 }

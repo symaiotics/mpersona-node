@@ -67,6 +67,7 @@ exports.getKnowledgeProfiles = async function (req, res, next) {
                     uuid: 1,
                     name: 1,
                     description: 1,
+                    context: 1,
                     isEditor: 1,
                     isViewer: 1,
                     isOwner: 1,

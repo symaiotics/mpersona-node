@@ -5,6 +5,7 @@ const { checkAndAssignToken, validateAndRenewToken } = require('../middleware/ve
 const filesController = require('../controllers/files');
 // router.get('/parse', [checkAndAssignToken], filesController.parseFiles);
 
+router.get('/', [checkAndAssignToken, validateAndRenewToken], filesController.getFiles);
 router.post('/', [checkAndAssignToken, validateAndRenewToken], filesController.uploadFiles);
 router.post('/create', [checkAndAssignToken, validateAndRenewToken], filesController.createFiles);
 router.post('/update', [checkAndAssignToken, validateAndRenewToken], filesController.updateFiles);

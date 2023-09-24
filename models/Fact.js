@@ -56,6 +56,10 @@ const FactSchema = new Schema({
         type: String,
         required: false
     },
+    keywords: {
+        type: Array,
+        required: false
+    },
 
     fact: {
         type: String,

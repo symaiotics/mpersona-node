@@ -223,15 +223,30 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
 
           } catch (error) {
             //Send error back to the client
-            sendToClient(uuid, session, "error", error)
-            console.error('Could not JSON parse stream message', message, error);
+            var errorObj = {
+              status: error?.response?.status,
+              statusText: error?.response?.statusText
+            }
+            sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
+            console.error('Could not JSON parse stream message', message, errorObj);
           }
         }
       }
     });
   }
   catch (error) {
-    console.log("Error", error)
+    // console.log("Error", error)
+    try {
+      var errorObj = {
+        status: error?.response?.status,
+        statusText: error?.response?.statusText
+      }
+      sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
+      console.error('Could not JSON parse stream message', message, errorObj);
+    }
+    catch (sendError) {
+      console.log("Send Error", sendError)
+    }
     // res.status(500).send({ message: "Prompt failure", payload: error })
   }
 }
@@ -239,4 +254,4 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
 
 
 //Export the app for use on the index.js page
-module.exports = { app, wss, sendToClient, prompt};
+module.exports = { app, wss, sendToClient, prompt };

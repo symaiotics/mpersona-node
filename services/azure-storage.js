@@ -36,7 +36,7 @@ async function uploadToAzure(file, containerName) {
             //     }
             // });
             console.log("Upload successful", uploadResponse)
-            return augmentedFilename;
+            return file.filename;
         } catch (error) {
             console.log("Error uploading", error)
             return error;
