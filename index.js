@@ -36,6 +36,10 @@ app.use('/knowledgeProfiles', require('./routes/knowledgeProfiles'));
 app.use('/facts', require('./routes/facts'));
 
 
+//Misc services
+app.use('/services', require('./routes/services'));
+
+
 //Establish a 404 Not Found Custom Response
 app.use((req, res,next)=>{
     const error = new Error('This site was not found. Perhaps you want to call login?');
