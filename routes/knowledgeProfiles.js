@@ -11,5 +11,8 @@ router.get('/', [checkAndAssignToken], knowledgeProfileController.getKnowledgePr
 router.post('/', [checkAndAssignToken], knowledgeProfileController.createKnowledgeProfiles);
 router.post('/update', [checkAndAssignToken, validateAndRenewToken], knowledgeProfileController.updateKnowledgeProfiles);
 
+//
+router.post('/addLink', [checkAndAssignToken, validateAndRenewToken], knowledgeProfileController.addLink);
+
 //export the router back to the index.js page
 module.exports = router;

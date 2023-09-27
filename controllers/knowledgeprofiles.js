@@ -72,6 +72,8 @@ exports.getKnowledgeProfiles = async function (req, res, next) {
                     isViewer: 1,
                     isOwner: 1,
                     isCreatedBy: 1,
+                    viewerLink:1, 
+                    editorLink:1,
                     filesCount: { $size: "$files" },
                     factsCount: { $size: "$facts" }
                 }
@@ -138,6 +140,57 @@ exports.updateKnowledgeProfiles = async function (req, res, next) {
         res.status(201).send({ message: "Here are your updated knowledge profiles", payload: updatedKnowledgeProfiles });
     } catch (error) {
         console.log(error)
+        res.status(400).send(error);
+    }
+};
+
+
+
+
+exports.addLink = async function (req, res, next) {
+    try {
+
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
+
+        var knowledgeProfileUuid = req.body.knowledgeProfileUuid || req.query.knowledgeProfileUuid || "";
+        var knowledgeProfileLink = req.body.knowledgeProfileLink || req.query.knowledgeProfileLink || "";
+        var linkType = req.body.linkType || req.query.linkType || "";
+
+        if (!username) {
+            return res.status(400).send({ message: "Username not found in token" });
+        }
+
+        var update = {};
+
+        if (linkType === 'editorLink') {
+            update.editorLink = knowledgeProfileLink;
+        } else if (linkType === 'viewerLink') {
+            update.viewerLink = knowledgeProfileLink;
+        } else {
+            return res.status(400).send({ message: "Invalid linkType" });
+        }
+
+        var query = {
+            uuid: knowledgeProfileUuid,
+            $or: [
+                { editors: username },
+                { owners: username }
+            ]
+        };
+
+        var updatedKnowledgeProfile = await KnowledgeProfile.updateOne(query, update);
+        console.log(updatedKnowledgeProfile)
+        if (updatedKnowledgeProfile.nModified === 0) {
+            return res.status(400).send({ message: "Unable to update. Ensure you have the right permissions." });
+        }
+
+        res.status(201).send({
+            message: "Link Added to knowledgeProfile",
+            payload: updatedKnowledgeProfile
+        });
+
+    } catch (error) {
+        console.log("Error", error)
         res.status(400).send(error);
     }
 };
