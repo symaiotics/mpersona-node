@@ -144,9 +144,6 @@ exports.updateKnowledgeProfiles = async function (req, res, next) {
     }
 };
 
-
-
-
 exports.addLink = async function (req, res, next) {
     try {
 
@@ -194,6 +191,73 @@ exports.addLink = async function (req, res, next) {
         res.status(400).send(error);
     }
 };
+
+// Gets all the unique details from the link provided
+exports.linkDetails = async function (req, res, next) {
+    try {
+
+        var link = req.body.link || req.query.link || "";
+        var knowledgeProfile = await KnowledgeProfile.findOne({ $or: [{ editorLink: link }, { viewerLink: link }] })
+            .select('name description editorLink viewerLink');
+
+        if (knowledgeProfile) {
+            knowledgeProfile = knowledgeProfile.toObject();
+            knowledgeProfile.isEditor = knowledgeProfile.editorLink === link;
+            knowledgeProfile.isViewer = knowledgeProfile.viewerLink === link;
+            delete knowledgeProfile.editorLink;
+            delete knowledgeProfile.viewerLink;
+
+            res.status(201).send({
+                message: "Here is the knowledgeProfile",
+                payload: knowledgeProfile
+            });
+        } else {
+            res.status(404).send({ message: "Knowledge Profile not found" });
+        }
+    } catch (error) {
+        console.log("Error", error)
+        res.status(400).send(error);
+    }
+};
+
+//accept knowledge profile from the link
+exports.acceptLink = async function (req, res, next) {
+    try {
+        var link = req.body.link || req.query.link || "";
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
+
+        if (!username) {
+            return res.status(400).send({ message: "Username not found in token" });
+        }
+
+        var knowledgeProfile = await KnowledgeProfile.findOne({ $or: [{ editorLink: link }, { viewerLink: link }] })
+            .select('editorLink viewerLink');
+
+        if (!knowledgeProfile) {
+            return res.status(404).send({ message: "Knowledge Profile not found" });
+        }
+
+        var update = {};
+
+        if (knowledgeProfile.editorLink === link) {
+            update.$addToSet = { editors: username };
+        } else if (knowledgeProfile.viewerLink === link) {
+            update.$addToSet = { viewers: username };
+        }
+
+        await KnowledgeProfile.updateOne({ _id: knowledgeProfile._id }, update);
+
+        res.status(201).send({
+            message: "Knowledge Profile link accepted"
+        });
+
+    } catch (error) {
+        console.log("Error", error)
+
+        res.status(400).send(error);
+    }
+};
+
 
 
 // const mammoth = require('mammoth');
