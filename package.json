@@ -13,7 +13,7 @@
     "personas"
   ],
   "author": "Symaiotics Corporation",
-  "license": "MIT",
+  "license": "UNLICENSED",
   "dependencies": {
     "@azure/storage-blob": "^12.15.0",
     "archiver": "^6.0.1",
