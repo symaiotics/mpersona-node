@@ -10,9 +10,17 @@ const jwt = require('jsonwebtoken');
 const createJWT = require('../middleware/verify').createJWT;
 const bcrypt = require('bcrypt');
 const { google } = require('googleapis');
-
-const oauth2Credentials = require('../_creds/credentials.json');
-
+let oauth2Credentials = null;
+try
+{
+    console.log(process.env.client_id)
+     oauth2Credentials = require('../_creds/credentials.json');
+}
+catch(error)
+{
+    //  oauth2Credentials = null;
+    console.log("Error loading oauth2Creds, will use params instead")
+}
 // Accepts a new account and saves it to the database
 exports.upgradeCode = async function (req, res, next) {
 
@@ -21,9 +29,9 @@ exports.upgradeCode = async function (req, res, next) {
         var code = req.body.code || req.query.code || null;
 
         const oauth2Client = new google.auth.OAuth2(
-            oauth2Credentials.web.client_id || process.env.client_id,
-            oauth2Credentials.web.client_secret || process.env.client_secret,
-            oauth2Credentials.web.redirect_uris[0] || process.env.redirect_uri // assuming the first redirect URI is the one you want to use
+            oauth2Credentials?.web?.client_id || process.env.client_id,
+            oauth2Credentials?.web?.client_secret || process.env.client_secret,
+            oauth2Credentials?.web?.redirect_uris?.[0] || process.env.redirect_uri // assuming the first redirect URI is the one you want to use
         );
 
         const { tokens } = await oauth2Client.getToken(code);
@@ -55,9 +63,9 @@ exports.getEmails = async function (req, res, next) {
     console.log("Loading email with tokens", tokens)
 
     const oauth2Client = new google.auth.OAuth2(
-        oauth2Credentials.web.client_id || process.env.client_id,
-        oauth2Credentials.web.client_secret || process.env.client_secret,
-        oauth2Credentials.web.redirect_uris[0] || process.env.redirect_uri // assuming the first redirect URI is the one you want to use
+        oauth2Credentials?.web?.client_id || process.env.client_id,
+        oauth2Credentials?.web?.client_secret || process.env.client_secret,
+        oauth2Credentials?.web?.redirect_uris?.[0] || process.env.redirect_uri // assuming the first redirect URI is the one you want to use
     );
 
     oauth2Client.setCredentials(tokens);
