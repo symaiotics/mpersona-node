@@ -38,6 +38,7 @@ app.use('/facts', require('./routes/facts'));
 
 //Misc services
 app.use('/services', require('./routes/services'));
+app.use('/google', require('./routes/google'));
 
 
 //Establish a 404 Not Found Custom Response

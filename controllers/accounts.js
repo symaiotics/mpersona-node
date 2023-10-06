@@ -80,63 +80,62 @@ exports.createNewAccount = async function (req, res, next) {
 
 // Accepts a new account and saves it to the database
 exports.login = async function (req, res, next) {
-try
+    try {
+        //Variables
+        var username = req.body.username || req.query.username || req.params.username || null;
+        var password = req.body.password || req.query.password || req.params.password || null;
 
-{
-    //Variables
-    var username = req.body.username || req.query.username || req.params.username || null;
-    var password = req.body.password || req.query.password || req.params.password || null;
-
-    //Verify Account
-    var findAccount = await Account.findOne({ username: username });
-    if (!findAccount) {
-        return res.status(400).send(JSON.stringify({ message: 'usernameNotFound', payload: null }));
-    }
-    else //Account Found
-    {
-        bcrypt.compare(password, findAccount.password, async (err, isMatch) => {
-            if (err) {
-                // throw err;
-                console.log("Password eval error");
-                return res.status(400).send(JSON.stringify({ message: 'passwordError', payload: null }));
-            } else if (!isMatch) {
-                console.log("Password doesn't match!");
-                return res.status(400).send(JSON.stringify({ message: 'passwordNotFound', payload: null }));
-            } else {
-                //Login Verified
-                //Update login information (last logged in)
-                //Update the user account information and remove password reset information if the login was successful
-                var toSet = {
-                    $set: {
-                        momentLastLogin: new Date(),
-                        passwordResetRequired: null,
-                        passwordResetRequested: null,
-                        passwordResetToken: null,
-                        momentPasswordResetTokenExpires: null,
+        //Verify Account
+        var findAccount = await Account.findOne({ username: username });
+        if (!findAccount) {
+            return res.status(400).send(JSON.stringify({ message: 'usernameNotFound', payload: null }));
+        }
+        else //Account Found
+        {
+            bcrypt.compare(password, findAccount.password, async (err, isMatch) => {
+                if (err) {
+                    // throw err;
+                    console.log("Password eval error");
+                    return res.status(400).send(JSON.stringify({ message: 'passwordError', payload: null }));
+                } else if (!isMatch) {
+                    console.log("Password doesn't match!");
+                    return res.status(400).send(JSON.stringify({ message: 'passwordNotFound', payload: null }));
+                } else {
+                    //Login Verified
+                    //Update login information (last logged in)
+                    //Update the user account information and remove password reset information if the login was successful
+                    var toSet = {
+                        $set: {
+                            momentLastLogin: new Date(),
+                            passwordResetRequired: null,
+                            passwordResetRequested: null,
+                            passwordResetToken: null,
+                            momentPasswordResetTokenExpires: null,
+                        }
                     }
+
+                    //If this is the first login, note it with the dateTime
+                    if (!findAccount.momentFirstLogin) toSet.momentFirstLogin = toSet.momentLastLogin;
+
+                    //Update the login account
+                    await Account.updateOne({ username: username }, toSet);
+
+                    //Set the header to return
+                    var newToken = createJWT(findAccount, req.fullUrl);
+                    res.header('auth-token', newToken.token);
+                    res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded));
+
+                    //TODO Insert token into logins collection
+
+                    //Return a successful login
+                    res.status(200).send(JSON.stringify({ message: "Success", payload: null }))
                 }
-
-                //If this is the first login, note it with the dateTime
-                if (!findAccount.momentFirstLogin) toSet.momentFirstLogin = toSet.momentLastLogin;
-
-                //Update the login account
-                await Account.updateOne({ username: username }, toSet);
-
-                //Set the header to return
-                var newToken = createJWT(findAccount, req.fullUrl);
-                res.header('auth-token', newToken.token);
-                res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded));
-
-                //TODO Insert token into logins collection
-
-                //Return a successful login
-                res.status(200).send(JSON.stringify({ message: "Success", payload: null }))
-            }
-        });
+            });
+        }
     }
-}
-catch(error)
-{
-    console.log(error)
-}
+    catch (error) {
+        console.log(error)
+    }
 };
+
+ 
