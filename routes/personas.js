@@ -17,7 +17,7 @@ router.post('/update', [checkAndAssignToken, validateAndRenewToken], personaCont
 router.post('/avatar', [checkAndAssignToken], personaController.createAvatar);
 
 //Delete
-// router.get('/delete', [checkAndAssignToken, validateAndRenewToken], personaController.deletePersona);
+router.post('/delete', [checkAndAssignToken, validateAndRenewToken], personaController.deletePersonas);
 // router.get('/deleteall', [checkAndAssignToken, validateAndRenewToken], personaController.deleteAllPersonas);
 
 //Link personas

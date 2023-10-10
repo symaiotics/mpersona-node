@@ -193,6 +193,11 @@ const PersonaSchema = new Schema({
         type: String,
         required: false
     },
+    isPublic: {
+        type: Boolean,
+        required: false,
+        default:false
+    },
     status: {
         type: String,
         enum: ['active', 'inactive'],

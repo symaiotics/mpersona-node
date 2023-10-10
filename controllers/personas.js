@@ -23,12 +23,16 @@ const upload = multer({ storage: multer.memoryStorage() });
 // const openai = new OpenAIApi(configuration);
 
 
-// Accepts a new account and saves it to the database
+// Returns the personas
 exports.getPersonas = async function (req, res, next) {
     try {
         // Get the public
+        var username = req?.tokenDecoded?.username || null;
+        var roles = req?.tokenDecoded?.roles || [];
+
+        console.log('username', username)
+        console.log('roles', roles)
         var query = { status: 'active', createdBy: 'public' };
-        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
 
         if (username) {
             query = {
@@ -36,11 +40,18 @@ exports.getPersonas = async function (req, res, next) {
                 $or: [
                     { editors: username },
                     { viewers: username },
-                    { owners: username },  // Added owners field here
+                    { owners: username },
                     { createdBy: username },
                     { createdBy: 'public' }
                 ]
-            }
+            };
+        }
+
+        // If roles include 'admin', adjust the query to get all active documents
+        if (roles.includes('admin')) {
+            query = {
+                status: 'active'
+            };
         }
 
         var aggregation = [
@@ -51,17 +62,23 @@ exports.getPersonas = async function (req, res, next) {
                     isViewer: username !== null ? { $in: [username, { $ifNull: ["$viewers", []] }] } : false,
                     isOwner: username !== null ? { $in: [username, { $ifNull: ["$owners", []] }] } : false,
                     isCreatedBy: username !== null ? { $eq: [username, "$createdBy"] } : false,
+                    // Add isAdmin based on roles
+                    isAdmin: { $literal: roles.includes('admin') }
                 }
-            },
-            {
+            }
+        ];
+
+        // Only add the $project stage if the user is not an admin
+        if (!roles.includes('admin')) {
+            aggregation.push({
                 $project: {
                     editors: 0,
                     viewers: 0,
                     owners: 0,
                     createdBy: 0
                 }
-            }
-        ];
+            });
+        }
 
         var personas = await Persona.aggregate(aggregation);
 
@@ -203,56 +220,120 @@ exports.updatePersonas = async function (req, res, next) {
         var personas = req.body.personas || req.query.personas || [];
         if (!Array.isArray(personas)) personas = [personas];
         var updatedPersonas = [];
+        var roles = req.tokenDecoded ? req.tokenDecoded.roles : [];
+        var isAdmin = roles.includes('admin');
+
         // console.log("Update  Personas", personas)
-        personas.forEach(async (persona) => {
+        for (let persona of personas) {
             const { _id, ...updateData } = persona;
-            var updateParams =
-            {
+            var baseUpdateParams = {
                 _id: _id,
                 $or: [
                     { editors: req.tokenDecoded.username },
-                    { createdBy: req.tokenDecoded.username }, //does it matter who the creator was?
+                    { createdBy: req.tokenDecoded.username },
                 ]
-
             };
-            console.log("updateParams", updateParams)
-            console.log("updateData", updateData)
+            
+            // If the user is an admin, then we ignore the other conditions and just match the _id
+            var updateParams = isAdmin ? { _id: _id } : baseUpdateParams;
+
+            console.log("updateParams", updateParams);
+            console.log("updateData", updateData);
             var results = await Persona.findOneAndUpdate(
                 updateParams, { $set: updateData }, { new: true }
-            )
-            console.log("Results", results)
-            updatedPersonas.push((results))
-        })
+            );
+            console.log("Results", results);
+            updatedPersonas.push(results);
+        }
 
         res.status(201).send({ message: "Here are your updated personas", payload: updatedPersonas });
     } catch (error) {
-        console.log(error)
+        console.log(error);
+        res.status(400).send(error);
+    }
+};
+exports.deletePersonas = async function (req, res, next) {
+    try {
+        var personas = req.body.personas || req.query.personas || [];
+        var roles = req.tokenDecoded ? req.tokenDecoded.roles : [];
+        var isAdmin = roles.includes('admin');
+
+        var aggregateResults = [];
+
+        for (let persona of personas) {
+            var baseDeleteParams = {
+                uuid: persona.uuid,
+                $or: [
+                    { editors: req.tokenDecoded.username },
+                    { owners: req.tokenDecoded.username },
+                ]
+            };
+
+            // If the user is an admin, then we just match the uuid to allow status update
+            var deleteParams = isAdmin ? { uuid: persona.uuid } : baseDeleteParams;
+
+            var result = await Persona.findOneAndUpdate(deleteParams, { $set: { status: 'inactive' } }, { new: true });
+            console.log("Result for persona with UUID:", persona.uuid, result);
+
+            if (!result) {
+                aggregateResults.push({ uuid: persona.uuid, status: "failed", reason: "Permission denied or persona not found." });
+            } else {
+                aggregateResults.push({ uuid: persona.uuid, status: "success", payload: result });
+            }
+        }
+
+        res.status(201).send({ message: "Processed personas", results: aggregateResults });
+    } catch (error) {
+        console.log(error);
         res.status(400).send(error);
     }
 };
 
-exports.deletePersona = async function (req, res, next) {
-    try {
-        var persona = req.body.persona || req.query.persona || [];
-        var results = await Persona.deleteOne({ uuid: persona.uuid })
-        console.log("Results", results)
-        res.status(201).send({ message: "Deleted one personas", payload: results });
-    } catch (error) {
-        console.log(error)
-        res.status(400).send(error);
-    }
-};
 
-exports.deleteAllPersonas = async function (req, res, next) {
-    try {
-        var results = await Persona.deleteMany({})
-        console.log("Results", results)
-        res.status(201).send({ message: "Deleted all personas", payload: results });
-    } catch (error) {
-        console.log(error)
-        res.status(400).send(error);
-    }
-};
+
+// exports.deletePersona = async function (req, res, next) {
+//     try {
+//         var persona = req.body.persona || req.query.persona || [];
+//         var roles = req.tokenDecoded ? req.tokenDecoded.roles : [];
+//         var isAdmin = roles.includes('admin');
+        
+//         var baseDeleteParams = {
+//             uuid: persona.uuid,
+//             $or: [
+//                 { editors: req.tokenDecoded.username },
+//                 { owners: req.tokenDecoded.username },
+//             ]
+//         };
+        
+//         // If the user is an admin, then we just match the uuid to allow deletion
+//         var deleteParams = isAdmin ? { uuid: persona.uuid } : baseDeleteParams;
+
+//         var results = await Persona.deleteOne(deleteParams);
+//         console.log("Results", results);
+        
+//         if (results.deletedCount === 0) {
+//             res.status(400).send({ message: "Permission denied or persona not found." });
+//             return;
+//         }
+
+//         res.status(201).send({ message: "Deleted one persona", payload: results });
+//     } catch (error) {
+//         console.log(error);
+//         res.status(400).send(error);
+//     }
+// };
+
+
+// exports.deleteAllPersonas = async function (req, res, next) {
+//     try {
+//         var results = await Persona.deleteMany({})
+//         console.log("Results", results)
+//         res.status(201).send({ message: "Deleted all personas", payload: results });
+//     } catch (error) {
+//         console.log(error)
+//         res.status(400).send(error);
+//     }
+// };
 
 
 // Gets all the unique details from the link provided
@@ -262,7 +343,6 @@ exports.addLink = async function (req, res, next) {
     try {
 
         var username = req.tokenDecoded ? req.tokenDecoded.username : null;
-
         var personaUuid = req.body.personaUuid || req.query.personaUuid || "";
         var personaLink = req.body.personaLink || req.query.personaLink || "";
         var linkType = req.body.linkType || req.query.linkType || "";
