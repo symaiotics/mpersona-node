@@ -145,6 +145,7 @@ exports.getFiles = async function (req, res, next) {
         console.log(query)
         const aggregation = [
             { $match: query },
+            { $sort: { momentCreated: -1 } },
             // Add isEditor, isViewer, isOwner, isCreatedBy fields
             {
                 $addFields: {
