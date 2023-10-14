@@ -12,7 +12,7 @@ const url = require('url');
 const WebSocket = require('ws');
 const uuidv4 = require('uuid').v4;
 
-
+const factsController = require('../controllers/facts')
 
 //Process JSON and urlencoded parameters
 app.use(express.json({ extended: true, limit: '100mb' }));
@@ -139,9 +139,6 @@ wss.on('connection', (ws) => {
       const data = JSON.parse(message);
       // Ensure the message contains a valid UUID before proceeding
       if (data.uuid) {
-
-
-        console.log(data)
         if (data.type === 'ping') {
           // Use the sendToClient function to send the pong response only to the client that sent the ping
           sendToClient(data.uuid, data.session, 'pong');
@@ -149,7 +146,8 @@ wss.on('connection', (ws) => {
 
         else if (data.type === 'prompt') {
           // Use the sendToClient function to send the pong response only to the client that sent the ping
-          prompt(data.uuid, data.session, data.model, data.temperature, data.systemPrompt, data.userPrompt);
+          console.log("Prompt Object", data)
+          prompt(data.uuid, data.session, data.model, data.temperature, data.systemPrompt, data.userPrompt, data.knowledgeProfileUuids);
         }
 
         else {
@@ -174,7 +172,7 @@ wss.on('connection', (ws) => {
 });
 
 //Execute an OpenAI prompt
-async function prompt(uuid, session, model, temperature, systemPrompt, userPrompt) {
+async function prompt(uuid, session, model, temperature, systemPrompt, userPrompt, knowledgeProfileUuids) {
   try {
     var messages = [
       {
@@ -183,11 +181,38 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
       }
     ];
 
+
+    console.log("knowledgeProfileUuids", knowledgeProfileUuids)
+
+    //Get the Knowwledge Profiles information
+    //Retrieves the facts from the DB and appends them to the systemPrompt
+    let facts = [];
+    let topScore = 0;
+    if (knowledgeProfileUuids && knowledgeProfileUuids.length) {
+      facts = await factsController.getFactsFromKnowledgeProfiles(userPrompt, knowledgeProfileUuids)
+      if (facts.length) {
+        console.log("Retreieved facts", facts.length)
+        let factPrompt = "";
+        facts.forEach((fact, index) => {
+          //Resolves weird Mongo object issue with scpre
+          fact = JSON.parse(JSON.stringify(fact))
+          if (index == 0) topScore = parseFloat(fact.score);
+          if (index < 20 && fact.score >= (topScore / 2)) {
+            console.log(fact.fact)
+            factPrompt += fact.fact + "\n";
+          }
+        })
+ 
+        //Allow the user to set the position of the facts relative to the system prompt
+        //Or remove, if they are using a finetune model
+        systemPrompt = systemPrompt + '\nUse these facts in the preparation of your response:\n' + factPrompt
+      }
+    }
+
     //Add in the system prompt, if one is provided
     if (systemPrompt) {
       messages.push(
         {
-
           role: "system",
           content: systemPrompt
         }

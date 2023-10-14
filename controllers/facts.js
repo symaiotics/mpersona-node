@@ -94,25 +94,30 @@ exports.searchFacts = async function (req, res, next) {
             return res.status(400).json({ error: 'searchString parameter is required' });
         }
 
-        // Initialize the query object with the text search condition
-        var query = { $text: { $search: searchString } };
-
-        console.log("knowledgeProfileUuids", knowledgeProfileUuids)
-        // If knowledgeProfileUuids are provided, add an $in condition to the query
-        if (knowledgeProfileUuids && Array.isArray(knowledgeProfileUuids) && knowledgeProfileUuids.length > 0) {
-            query.knowledgeProfileUuid = { $in: knowledgeProfileUuids };
-        }
-        
-        console.log(query);
-
-        const results = await Fact.find(query, { score: { $meta: 'textScore' } })
-            .sort({ score: { $meta: 'textScore' } });
+        let results = await getFactsFromKnowledgeProfiles(searchString, knowledgeProfileUuids)
 
         res.status(200).send({ message: "Search Results", payload: results });
     } catch (err) {
         console.log(err);
         res.status(500).json({ error: 'Internal Server Error' });
     }
+}
+
+
+exports.getFactsFromKnowledgeProfiles = async function (searchString, knowledgeProfileUuids) {
+
+    // Initialize the query object with the text search condition
+    var query = { $text: { $search: searchString } };
+
+    // If knowledgeProfileUuids are provided, add an $in condition to the query
+    if (knowledgeProfileUuids && Array.isArray(knowledgeProfileUuids) && knowledgeProfileUuids.length > 0) {
+        query.knowledgeProfileUuid = { $in: knowledgeProfileUuids };
+    }
+
+    const results = await Fact.find(query, { score: { $meta: 'textScore' } })
+        .sort({ score: { $meta: 'textScore' } });
+
+    return results;
 }
 
 
