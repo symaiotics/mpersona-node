@@ -177,6 +177,7 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
   //Enrich the prompt with some context data
   // userPrompt = "The date is " + new Date().toDateString() + "\n\n" + userPrompt + "\n\n";
 
+  console.log("User Prompt", userPrompt)
   let messages = [];
   if (messageHistory?.length) {
     messages = messageHistory;
@@ -212,11 +213,13 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
           if (index == 0) topScore = parseFloat(fact.score);
           if (index < 20 && fact.score >= (topScore / 2)) {
             knowledgePrompt += " > " + fact.fact + "\n";
-            addedFacts = true;
           }
         })
+        addedKnowledge = true;
+
       }
     }
+    console.log("Added", addedKnowledge)
 
     //Add in the system prompt, if knowledge prompt returned
     if (addedKnowledge) {
@@ -228,7 +231,6 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
       )
     }
 
-    console.log("Messages", messages)
 
     var fullPrompt = {
       model: model,
@@ -236,6 +238,8 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
       temperature: parseFloat(temperature) || 0.5,
       stream: true,
     }
+
+    console.log("Full Prompt", fullPrompt)
 
     const responseStream = await openai.createChatCompletion(fullPrompt, { responseType: 'stream' });
 
@@ -278,7 +282,7 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
         statusText: error?.response?.statusText
       }
       sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
-      console.error('Could not JSON parse stream message',  errorObj);
+      console.error('Could not JSON parse stream message', errorObj);
     }
     catch (sendError) {
       console.log("Send Error", sendError)
