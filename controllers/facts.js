@@ -94,7 +94,7 @@ exports.searchFacts = async function (req, res, next) {
             return res.status(400).json({ error: 'searchString parameter is required' });
         }
 
-        let results = await getFactsFromKnowledgeProfiles(searchString, knowledgeProfileUuids)
+        let results = await exports.getFactsFromKnowledgeProfiles(searchString, knowledgeProfileUuids)
 
         res.status(200).send({ message: "Search Results", payload: results });
     } catch (err) {

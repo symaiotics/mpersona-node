@@ -164,6 +164,10 @@ const PersonaSchema = new Schema({
         type: [ReferenceBlockSchema],
         default: []
     },
+    knowledgeProfiles: {
+        type: Array,
+        default: []
+    },
     //Administrative 
     owners: {
         type: Array,
