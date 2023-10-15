@@ -173,6 +173,11 @@ wss.on('connection', (ws) => {
 
 //Execute an OpenAI prompt
 async function prompt(uuid, session, model, temperature, systemPrompt, userPrompt, knowledgeProfileUuids) {
+
+  //Enrich the prompt with some context data
+  userPrompt = "The date is " + new Date().toDateString() + "\n\n" + userPrompt + "\n\n";
+
+
   try {
     var messages = [
       {
@@ -205,7 +210,7 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
  
         //Allow the user to set the position of the facts relative to the system prompt
         //Or remove, if they are using a finetune model
-        systemPrompt = systemPrompt + '\nUse these facts in the preparation of your response ONLY if they are specifically relevant to the question. \nOtherwise ignore them completely. \nIf the question does not relate to these facts, do not use any information from these facts. \nIf the topics of the question do not relate, do not use! :\n\n' + factPrompt
+        systemPrompt = systemPrompt + '\n\nFacts:\nUse these facts in the preparation of your response ONLY if they are specifically relevant to the question. \nOtherwise ignore them completely. \nIf the question does not relate to these facts, do not use any information from these facts. \nIf the topics of the question do not relate, do not use! :\n\n' + factPrompt
       }
     }
 
