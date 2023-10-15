@@ -146,8 +146,8 @@ wss.on('connection', (ws) => {
 
         else if (data.type === 'prompt') {
           // Use the sendToClient function to send the pong response only to the client that sent the ping
-          console.log("Prompt Object", data)
-          prompt(data.uuid, data.session, data.model, data.temperature, data.systemPrompt, data.userPrompt, data.knowledgeProfileUuids);
+          // console.log("Prompt Object", data)
+          prompt(data.uuid, data.session, data.model, data.temperature, data.systemPrompt, data.userPrompt, data.messageHistory, data.knowledgeProfileUuids);
         }
 
         else {
@@ -172,58 +172,63 @@ wss.on('connection', (ws) => {
 });
 
 //Execute an OpenAI prompt
-async function prompt(uuid, session, model, temperature, systemPrompt, userPrompt, knowledgeProfileUuids) {
+async function prompt(uuid, session, model, temperature, systemPrompt, userPrompt, messageHistory, knowledgeProfileUuids) {
 
   //Enrich the prompt with some context data
-  userPrompt = "The date is " + new Date().toDateString() + "\n\n" + userPrompt + "\n\n";
+  // userPrompt = "The date is " + new Date().toDateString() + "\n\n" + userPrompt + "\n\n";
 
-
-  try {
-    var messages = [
+  let messages = [];
+  if (messageHistory?.length) {
+    messages = messageHistory;
+  }
+  else {
+    messages = [
+      {
+        role: "system",
+        content: systemPrompt
+      },
       {
         role: "user",
         content: userPrompt
       }
     ];
+  }
 
-
-    console.log("knowledgeProfileUuids", knowledgeProfileUuids)
+  try {
+    let knowledgePrompt = "Here are some additional facts which may be relevant to your answer.\n\n";
+    knowledgePrompt = knowledgePrompt + '\n\nFacts:\nUse these facts in the preparation of your response ONLY if they are specifically relevant to the question. \nOtherwise ignore them completely. \nIf the question does not relate to these facts, do not use any information from these facts. \nIf the topics of the question do not relate, do not use! :\n\n';
 
     //Get the Knowwledge Profiles information
     //Retrieves the facts from the DB and appends them to the systemPrompt
     let facts = [];
     let topScore = 0;
+    let addedKnowledge = false;
     if (knowledgeProfileUuids && knowledgeProfileUuids.length) {
       facts = await factsController.getFactsFromKnowledgeProfiles(userPrompt, knowledgeProfileUuids)
       if (facts.length) {
-        console.log("Retreieved facts", facts.length)
-        let factPrompt = "";
         facts.forEach((fact, index) => {
           //Resolves weird Mongo object issue with scpre
           fact = JSON.parse(JSON.stringify(fact))
           if (index == 0) topScore = parseFloat(fact.score);
           if (index < 20 && fact.score >= (topScore / 2)) {
-            console.log(fact.fact)
-            factPrompt += " > " + fact.fact + "\n";
+            knowledgePrompt += " > " + fact.fact + "\n";
+            addedFacts = true;
           }
         })
- 
-        //Allow the user to set the position of the facts relative to the system prompt
-        //Or remove, if they are using a finetune model
-        systemPrompt = systemPrompt + '\n\nFacts:\nUse these facts in the preparation of your response ONLY if they are specifically relevant to the question. \nOtherwise ignore them completely. \nIf the question does not relate to these facts, do not use any information from these facts. \nIf the topics of the question do not relate, do not use! :\n\n' + factPrompt
       }
     }
 
-    console.log("System Prompt", systemPrompt)
-    //Add in the system prompt, if one is provided
-    if (systemPrompt) {
+    //Add in the system prompt, if knowledge prompt returned
+    if (addedKnowledge) {
       messages.push(
         {
           role: "system",
-          content: systemPrompt
+          content: knowledgePrompt
         }
       )
     }
+
+    console.log("Messages", messages)
 
     var fullPrompt = {
       model: model,
@@ -266,14 +271,14 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
     });
   }
   catch (error) {
-    // console.log("Error", error)
+    console.log("Error", error)
     try {
       var errorObj = {
         status: error?.response?.status,
         statusText: error?.response?.statusText
       }
       sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
-      console.error('Could not JSON parse stream message', message, errorObj);
+      console.error('Could not JSON parse stream message',  errorObj);
     }
     catch (sendError) {
       console.log("Send Error", sendError)
