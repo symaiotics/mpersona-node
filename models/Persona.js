@@ -168,7 +168,17 @@ const PersonaSchema = new Schema({
         type: Array,
         default: []
     },
+
     //Administrative 
+    publishStatus: {
+        type: String,
+        enum: ['unpublished', 'proposedForPublishing', 'published', 'suspended'],
+        default: 'unpublished'
+    },
+    publishedBy: {
+        type: String,
+    },
+
     owners: {
         type: Array,
         default: []

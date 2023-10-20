@@ -9,9 +9,10 @@ router.get('/', [checkAndAssignToken], personaController.getPersonas);
 router.get('/skills', [checkAndAssignToken], personaController.getSkills);
 router.get('/categories', [checkAndAssignToken], personaController.getCategories);
 
-//Create
+//Create / Update
 router.post('/', [checkAndAssignToken], personaController.createPersonas);
 router.post('/update', [checkAndAssignToken, validateAndRenewToken], personaController.updatePersonas);
+router.post('/publish', [checkAndAssignToken, validateAndRenewToken], personaController.publishPersonas);
 
 //Avatar
 router.post('/avatar', [checkAndAssignToken], personaController.createAvatar);

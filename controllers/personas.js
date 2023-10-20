@@ -30,39 +30,41 @@ exports.getPersonas = async function (req, res, next) {
         var username = req?.tokenDecoded?.username || null;
         var roles = req?.tokenDecoded?.roles || [];
 
-        console.log('username', username)
-        console.log('roles', roles)
-        var query = { status: 'active', createdBy: 'public' };
+        const baseQuery = { status: 'active' };
+        var query;
 
-        if (username) {
+        if (roles.includes('admin')) {
+            // If roles include 'admin', get all active documents
+            query = baseQuery;
+        } else if (username) {
+            // If username is provided, adjust the query to filter by ownership, editorship, viewership, or published status
             query = {
-                status: 'active',
+                ...baseQuery,
                 $or: [
+                    { owners: username },
                     { editors: username },
                     { viewers: username },
-                    { owners: username },
-                    { createdBy: username },
-                    { createdBy: 'public' }
+                    { publishStatus: 'published' }
                 ]
+            };
+        } else {
+            // Default query if no username or admin role
+            query = {
+                ...baseQuery,
+                publishStatus: 'published'
             };
         }
 
-        // If roles include 'admin', adjust the query to get all active documents
-        if (roles.includes('admin')) {
-            query = {
-                status: 'active'
-            };
-        }
+
+
 
         var aggregation = [
             { $match: query },
             {
                 $addFields: {
+                    isOwner: username !== null ? { $in: [username, { $ifNull: ["$owners", []] }] } : false,
                     isEditor: username !== null ? { $in: [username, { $ifNull: ["$editors", []] }] } : false,
                     isViewer: username !== null ? { $in: [username, { $ifNull: ["$viewers", []] }] } : false,
-                    isOwner: username !== null ? { $in: [username, { $ifNull: ["$owners", []] }] } : false,
-                    isCreatedBy: username !== null ? { $eq: [username, "$createdBy"] } : false,
-                    // Add isAdmin based on roles
                     isAdmin: { $literal: roles.includes('admin') }
                 }
             }
@@ -75,7 +77,6 @@ exports.getPersonas = async function (req, res, next) {
                     editors: 0,
                     viewers: 0,
                     owners: 0,
-                    createdBy: 0
                 }
             });
         }
@@ -229,11 +230,11 @@ exports.updatePersonas = async function (req, res, next) {
             var baseUpdateParams = {
                 _id: _id,
                 $or: [
+                    { owners: req.tokenDecoded.username },
                     { editors: req.tokenDecoded.username },
-                    { createdBy: req.tokenDecoded.username },
                 ]
             };
-            
+
             // If the user is an admin, then we ignore the other conditions and just match the _id
             var updateParams = isAdmin ? { _id: _id } : baseUpdateParams;
 
@@ -296,7 +297,7 @@ exports.deletePersonas = async function (req, res, next) {
 //         var persona = req.body.persona || req.query.persona || [];
 //         var roles = req.tokenDecoded ? req.tokenDecoded.roles : [];
 //         var isAdmin = roles.includes('admin');
-        
+
 //         var baseDeleteParams = {
 //             uuid: persona.uuid,
 //             $or: [
@@ -304,13 +305,13 @@ exports.deletePersonas = async function (req, res, next) {
 //                 { owners: req.tokenDecoded.username },
 //             ]
 //         };
-        
+
 //         // If the user is an admin, then we just match the uuid to allow deletion
 //         var deleteParams = isAdmin ? { uuid: persona.uuid } : baseDeleteParams;
 
 //         var results = await Persona.deleteOne(deleteParams);
 //         console.log("Results", results);
-        
+
 //         if (results.deletedCount === 0) {
 //             res.status(400).send({ message: "Permission denied or persona not found." });
 //             return;
@@ -417,6 +418,8 @@ exports.linkDetails = async function (req, res, next) {
     }
 };
 
+
+
 //accept persona from the link
 exports.acceptLink = async function (req, res, next) {
     try {
@@ -454,3 +457,116 @@ exports.acceptLink = async function (req, res, next) {
         res.status(400).send(error);
     }
 };
+
+
+//Publish 
+// Gets all the unique details from the link provided
+exports.publish = async function (req, res, next) {
+    try {
+        const publishStatus = req.body.publishStatus || req.query.publishStatus;
+        const personaUuids = req.body.personaUuids || req.query.personaUuids || [];
+
+        if (!publishStatus) {
+            return res.status(400).send({ message: "Publish status is required" });
+        }
+        if (!personaUuids.length) {
+            return res.status(400).send({ message: "Persona UUID is required" });
+        }
+
+        const username = req.tokenDecoded ? req.tokenDecoded.username : null;
+        const roles = req.tokenDecoded ? req.tokenDecoded.roles : [];
+        const isAdmin = roles.includes('admin');
+
+        if (!isAdmin && (publishStatus === 'published' || publishStatus === 'suspended')) {
+            return res.status(400).send({ message: "No permission to publish or suspend these personas" });
+        }
+
+        const allResults = await Promise.all(personaUuids.map(async (personaUuid) => {
+            let updateParams = {
+                uuid: personaUuid,
+            };
+            if (!isAdmin) {
+                updateParams.$or = [
+                    { owners: username },
+                    { editors: username },
+                ];
+            }
+            const setValues = { $set: { publishStatus: publishStatus } };
+            return await Persona.findOneAndUpdate(updateParams, setValues, { new: true });
+        }));
+
+        res.status(200).send({
+            message: "Publish status updated",
+            payload: allResults
+        });
+    } catch (error) {
+        console.log("Error", error);
+        res.status(500).send(error);
+    }
+};
+
+//Publish
+// Middleware to check user roles
+const checkUserRole = (req, res, next) => {
+    const roles = req.tokenDecoded ? req.tokenDecoded.roles : [];
+    req.isAdmin = roles.includes('admin');
+    next();
+};
+
+// Middleware to validate request payload
+const validatePayload = (req, res, next) => {
+    const publishStatus = req.body.publishStatus || req.query.publishStatus;
+    const personaUuids = req.body.personaUuids || req.query.personaUuids || [];
+
+    if (!publishStatus) {
+        return res.status(400).send({ message: "Publish status is required" });
+    }
+    if (!personaUuids.length) {
+        return res.status(400).send({ message: "Persona UUID is required" });
+    }
+
+    req.publishStatus = publishStatus;
+    req.personaUuids = personaUuids;
+
+    next();
+};
+
+exports.publishPersonas = [
+    checkUserRole,
+    validatePayload,
+    async function (req, res, next) {
+        try {
+            const { isAdmin, publishStatus, personaUuids } = req;
+            console.log("isAdmin", isAdmin)
+
+            // Check permissions
+            if (!isAdmin && (publishStatus === 'published' || publishStatus === 'suspended')) {
+                return res.status(400).send({ message: "No permission to publish or suspend these personas" });
+            }
+
+            // Define the update parameters
+            const filter = { uuid: { $in: personaUuids } };
+            if (!isAdmin) {
+                filter.$or = [
+                    { owners: req.tokenDecoded.username },
+                    { editors: req.tokenDecoded.username }
+                ];
+            }
+            const update = { $set: { publishStatus: publishStatus, publishedBy: req.tokenDecoded.username } };
+
+            console.log("filter", filter)
+            console.log("update", update)
+            // Update all matching personas at once
+            const result = await Persona.updateMany(filter, update);
+
+            res.status(200).send({
+                message: "Publish status updated",
+                modifiedCount: result.nModified
+            });
+        } catch (error) {
+            console.log("Error", error);
+            res.status(500).send(error);
+        }
+    }
+];
+
