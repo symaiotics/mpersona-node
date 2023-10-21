@@ -27,13 +27,14 @@ const upload = multer({ storage: multer.memoryStorage() });
 exports.getPersonas = async function (req, res, next) {
     try {
         // Get the public
+        var viewAll = req.body.viewAll || req.query.viewAll || false;
         var username = req?.tokenDecoded?.username || null;
         var roles = req?.tokenDecoded?.roles || [];
 
         const baseQuery = { status: 'active' };
         var query;
 
-        if (roles.includes('admin')) {
+        if (roles.includes('admin') && viewAll) {
             // If roles include 'admin', get all active documents
             query = baseQuery;
         } else if (username) {
@@ -81,7 +82,7 @@ exports.getPersonas = async function (req, res, next) {
             });
         }
 
-        var personas = await Persona.aggregate(aggregation);
+        var personas = await Persona.aggregate(aggregation).sort('name');
 
         if (personas.length > 0) {
             res.status(200).send({ message: "Here are all the active personas", payload: personas });
@@ -167,10 +168,10 @@ exports.createPersonas = async function (req, res, next) {
         //Set the person who created this persona, if applicable
         personas.forEach((persona) => {
             if (req.tokenDecoded) {
-                persona.createdBy = req.tokenDecoded.username;
                 persona.owners = [req.tokenDecoded.username];
                 persona.editors = [req.tokenDecoded.username];
                 persona.viewers = [req.tokenDecoded.username];
+                persona.createdBy = req.tokenDecoded.username;
             }
         })
 
