@@ -26,5 +26,10 @@ router.post('/addLink', [checkAndAssignToken, validateAndRenewToken], personaCon
 router.post('/linkDetails', [checkAndAssignToken, validateAndRenewToken], personaController.linkDetails);
 router.post('/acceptLink', [checkAndAssignToken, validateAndRenewToken], personaController.acceptLink);
 
+//finetune models
+router.post('/finetune', [checkAndAssignToken, validateAndRenewToken], personaController.createFinetune);
+router.post('/finetuneStatuses', [checkAndAssignToken, validateAndRenewToken], personaController.loadFinetuneStatus);
+
+
 //export the router back to the index.js page
 module.exports = router;

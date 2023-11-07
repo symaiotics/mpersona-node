@@ -98,13 +98,13 @@ if (process.env.DATASTORE == 'MongoDB' || process.env.DATASTORE == 'CosmosDB') {
 
 
 
-//Open AI
-const { Configuration, OpenAIApi } = require("openai");
-const configuration = new Configuration({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-const openai = new OpenAIApi(configuration);
 
+
+const OpenAI = require('openai');
+
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY // This is also the default, can be omitted
+});
 
 
 
@@ -241,38 +241,57 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
 
     console.log("Full Prompt", fullPrompt)
 
-    const responseStream = await openai.createChatCompletion(fullPrompt, { responseType: 'stream' });
+    // const responseStream = await openai.createChatCompletion(fullPrompt, { responseType: 'stream' });
+    const responseStream = await openai.chat.completions.create(fullPrompt);
 
-    responseStream.data.on('data', data => {
-
-      const lines = data.toString().split('\n').filter(line => line.trim() !== '');
-      for (const line of lines) {
-        const message = line.replace(/^data: /, '');
-        if (message === '[DONE]') {
-          //Send EOM back to the client
-          sendToClient(uuid, session, "EOM", null)
-        }
-        else {
-          try {
-            const parsed = JSON.parse(message).choices?.[0]?.delta?.content;
-            if (parsed && parsed !== null && parsed !== 'null' && parsed !== 'undefined' && parsed !== undefined) {
-              //Send the fragment back to the correct client
-              // console.log(parsed)
-              sendToClient(uuid, session, "message", parsed)
-            }
-
-          } catch (error) {
-            //Send error back to the client
-            var errorObj = {
-              status: error?.response?.status,
-              statusText: error?.response?.statusText
-            }
-            sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
-            console.error('Could not JSON parse stream message', message, errorObj);
-          }
-        }
+    for await (const part of responseStream) {
+      console.log(part.choices[0].delta);
+      try {
+        if (part?.choices?.[0]?.delta?.content) sendToClient(uuid, session, "message", part.choices[0].delta.content)
+        else sendToClient(uuid, session, "EOM", null)
       }
-    });
+      catch (error) {
+        //Send error back to the client
+        var errorObj = {
+          status: error?.response?.status,
+          statusText: error?.response?.statusText
+        }
+        sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
+        console.error('Could not JSON parse stream message', message, errorObj);
+      }
+    }
+
+    //Old V3 OpenAI API
+    // responseStream.data.on('data', data => {
+
+    //   const lines = data.toString().split('\n').filter(line => line.trim() !== '');
+    //   for (const line of lines) {
+    //     const message = line.replace(/^data: /, '');
+    //     if (message === '[DONE]') {
+    //       //Send EOM back to the client
+    //       sendToClient(uuid, session, "EOM", null)
+    //     }
+    //     else {
+    //       try {
+    //         const parsed = JSON.parse(message).choices?.[0]?.delta?.content;
+    //         if (parsed && parsed !== null && parsed !== 'null' && parsed !== 'undefined' && parsed !== undefined) {
+    //           //Send the fragment back to the correct client
+    //           // console.log(parsed)
+    //           sendToClient(uuid, session, "message", parsed)
+    //         }
+
+    //       } catch (error) {
+    //         //Send error back to the client
+    //         var errorObj = {
+    //           status: error?.response?.status,
+    //           statusText: error?.response?.statusText
+    //         }
+    //         sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
+    //         console.error('Could not JSON parse stream message', message, errorObj);
+    //       }
+    //     }
+    //   }
+    // });
   }
   catch (error) {
     console.log("Error", error)
@@ -294,4 +313,4 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
 
 
 //Export the app for use on the index.js page
-module.exports = { app, wss, sendToClient, prompt };
+module.exports = { app, wss, sendToClient, prompt, openai };

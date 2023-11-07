@@ -164,3 +164,81 @@ async function createTextIndex() {
         console.error('Error creating text index:', err);
     }
 }
+
+
+exports.getFactsByKnowledgeProfileUuids = async function (req, res, next) {
+    try {
+        const knowledgeProfileUuids = req.body.knowledgeProfileUuids || req.query.knowledgeProfileUuids || null;
+        var username = req.tokenDecoded ? req.tokenDecoded.username : null;
+
+        if (!knowledgeProfileUuids) {
+            return res.status(400).send({ message: "knowledgeProfileUuids parameter is required" });
+        }
+
+        var facts = exports.findFacts(username, knowledgeProfileUuids)
+        if (facts.length > 0) {
+            let jsonl = exports.formatFactsToJsonl(facts);
+            res.status(200).send({ message: "Here is the jsonl of these knowledge profiles", payload: jsonl });
+        } else {
+            res.status(404).send({ message: "No active facts found", payload: [] });
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(400).send(error);
+    }
+};
+
+
+
+exports.findFacts = async function (username, knowledgeProfileUuids) {
+    try {
+        // Ensure knowledgeProfileUuids is an array
+        const uuidArray = Array.isArray(knowledgeProfileUuids) ? knowledgeProfileUuids : [knowledgeProfileUuids];
+
+        let query = {};
+        if (username) {
+            query = {
+                knowledgeProfileUuid: { $in: uuidArray },
+                status: 'active',
+                $or: [
+                    { owners: username },
+                    { editors: username },
+                    { viewers: username },
+                ]
+            };
+        } else {
+            query = {
+                knowledgeProfileUuid: { $in: uuidArray },
+                status: 'active'
+            };
+        }
+
+        var facts = await Fact.find(query);
+        return facts;
+    } catch (error) {
+        console.log(error);
+        return [];
+    }
+};
+
+
+
+exports.formatFactsToJsonl = function (facts, systemPrompt) {
+    let jsonlLines = [];
+
+    for (let fact of facts) {
+        for (let question of fact.questions) {
+            const jsonlLine = {
+                messages: [
+
+                    { role: "user", content: question },
+                    { role: "assistant", content: fact.fact }
+                ]
+            };
+            if (systemPrompt) jsonlLine.messages.unshift({ role: "system", content: systemPrompt }) // add system prompt  prompt
+            jsonlLines.push(JSON.stringify(jsonlLine));
+        }
+    }
+
+    return jsonlLines.join('\n');
+}

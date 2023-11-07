@@ -21,7 +21,7 @@ app.use('/categories', require('./routes/categories'));
 app.use('/accounts', require('./routes/accounts'));
 
 //Generate prompts
-app.use('/prompts', require('./routes/prompts'));
+// app.use('/prompts', require('./routes/prompts'));
 
 //Upload files
 app.use('/files', require('./routes/files'));

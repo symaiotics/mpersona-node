@@ -147,6 +147,24 @@ const PersonaSchema = new Schema({
         required: false
     },
 
+    finetuneFiles: {
+        type: Array,
+        default: [],
+        required: false
+    },
+
+    finetuneModels: {
+        type: Array,
+        default: [],
+        required: false
+    },
+
+    //If this is not null, use it as the model in the request
+    selectedFinetuneModel: {
+        type: String,
+        required: false
+    },
+
     //Arrays
     skills: {
         type: [SkillSchema],

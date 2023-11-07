@@ -15,13 +15,12 @@ const containerClient = blobServiceClient.getContainerClient(containerName);
 
 const upload = multer({ storage: multer.memoryStorage() });
 
-// const { Configuration, OpenAIApi } = require("openai");
 
-// const configuration = new Configuration({
-//     apiKey: process.env.OPENAI_API_KEY,
-// });
-// const openai = new OpenAIApi(configuration);
-
+const factController = require('./facts');
+const { Readable } = require('stream');
+const FormData = require('form-data');
+const { openai } = require("../config/app.js");
+const { toFile } = require('openai');
 
 // Returns the personas
 exports.getPersonas = async function (req, res, next) {
@@ -571,3 +570,97 @@ exports.publishPersonas = [
     }
 ];
 
+
+
+//Finetune
+// Helper function for sending responses
+const sendResponse = (res, status, message, payload = null) => {
+    res.status(status).send({ message, payload });
+};
+
+// Create and upload a finetunem model
+// Create and upload a finetune model
+exports.createFinetune = async function (req, res, next) {
+    try {
+        const personaUuids = req.body.personaUuids || req.query.personaUuids || [];
+        const username = req.tokenDecoded ? req.tokenDecoded.username : null;
+
+        if (!personaUuids.length) { // Check if the array is empty
+            return sendResponse(res, 400, "Persona UUID is required");
+        }
+
+        if (!username) {
+            return sendResponse(res, 400, "Username not found in token");
+        }
+
+        const personas = await Persona.find({ uuid: { $in: personaUuids } });
+
+        if (!personas.length) { // Check if the array is empty
+            return sendResponse(res, 404, "Personas not found");
+        }
+
+        let trainingFiles = [];
+        let fineTunes = [];
+        for (const [index, persona] of personas.entries()) { // Use for...of loop for async/await
+            const knowledgeProfileUuids = persona.knowledgeProfiles.map(kp => kp.uuid);
+            if (knowledgeProfileUuids.length) {
+                const facts = await factController.findFacts(username, knowledgeProfileUuids);
+                const jsonl = factController.formatFactsToJsonl(facts, persona.basePrompt);
+                validateJSONLString(jsonl);
+                let trainingFile = await openai.files.create({
+                    file: await toFile(Buffer.from(jsonl), 'input.jsonl'),
+                    purpose: 'fine-tune', // or 'answers', 'classifications', 'search' depending on your use case
+                });
+                trainingFiles.push(trainingFile);
+                await Persona.updateOne({ _id: persona._id }, { $push: { finetuneFiles: trainingFile } });
+
+                const fineTune = await openai.fineTuning.jobs.create({ training_file: trainingFile.id, model: 'gpt-3.5-turbo' })
+                fineTunes.push(fineTune);
+                await Persona.updateOne({ _id: persona._id }, { $push: { finetuneModels: fineTune } });
+            }
+        }
+
+        sendResponse(res, 201, "Personas uploaded for finetune", { trainingFiles, fineTunes });
+
+    } catch (error) {
+        console.error("Error:", error);
+        sendResponse(res, 500, "An error occurred", error.toString());
+    }
+};
+
+async function validateJSONLString(jsonlString) {
+    const lines = jsonlString.split(/\r?\n/);
+    let lineNumber = 0;
+
+    for (const line of lines) {
+        if (line.trim() === '') continue; // Skip empty lines
+        lineNumber++;
+        try {
+            JSON.parse(line);
+        } catch (error) {
+            console.error(`Invalid JSON at line ${lineNumber}: ${error.message}`);
+            return false;
+        }
+    }
+
+    console.log('All lines are valid JSON!');
+    return true;
+}
+
+
+exports.loadFinetuneStatus = async function (req, res, next) {
+    try {
+        const finetuneId = req.body.finetuneId || req.query.finetuneId || null;
+        let status = null;
+        if (finetuneId) {
+            status = await openai.fineTuning.jobs.retrieve(finetuneId);
+        }
+        else {
+            status = await openai.fineTuning.jobs.list({ limit: 10 });
+        }
+        sendResponse(res, 201, "Here are the statuses", status);
+    } catch (error) {
+        console.error("Error:", error);
+        sendResponse(res, 500, "An error occurred", error.toString());
+    }
+}
