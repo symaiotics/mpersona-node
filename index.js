@@ -35,6 +35,8 @@ app.use('/knowledgeProfiles', require('./routes/knowledgeProfiles'));
 //Facts
 app.use('/facts', require('./routes/facts'));
 
+//Rosters
+app.use('/rosters', require('./routes/rosters'));
 
 //Misc services
 app.use('/services', require('./routes/services'));
