@@ -130,7 +130,6 @@ exports.get = async function (req, res, next) {
 //     }
 // };
 
-
 exports.getFromUuid = async function (req, res, next) {
     try {
         var rosterUuid = req.body.rosterUuid || req.query.rosterUuid || "";
@@ -163,6 +162,7 @@ exports.getFromUuid = async function (req, res, next) {
                     owners: 1,
                     editors: 1,
                     viewers: 1,
+                    personaUuids: 1,
                     personas: 1
                 }
             }
@@ -171,12 +171,19 @@ exports.getFromUuid = async function (req, res, next) {
         const results = await Roster.aggregate(aggregation).exec();
 
         if (results && results.length > 0) {
-            res.status(201).send({ message: "Here is the roster requested", payload: results[0] });
+            const roster = results[0];
+            // Sort personas based on the order of UUIDs in the `personaUuids` array
+            const sortedPersonas = roster.personaUuids.map(uuid => 
+                roster.personas.find(persona => persona.uuid === uuid)
+            ).filter(persona => persona !== undefined); // Filter out any undefined results
+
+            roster.personas = sortedPersonas;
+            res.status(201).send({ message: "Here is the roster requested", payload: roster });
         } else {
             res.status(404).send({ message: "Roster not found" });
         }
     } catch (error) {
-        console.log("Error", error)
+        console.error("Error", error);
         res.status(400).send(error);
     }
 };
