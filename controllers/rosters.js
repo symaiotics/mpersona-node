@@ -118,18 +118,68 @@ exports.get = async function (req, res, next) {
     }
 };
 
+// exports.getFromUuid = async function (req, res, next) {
+//     try {
+//         var rosterUuid = req.body.rosterUuid || req.query.rosterUuid || "";
+//         let query = { status: 'active', uuid:rosterUuid };
+//         const results = await Roster.findOne(query);
+//         res.status(201).send({ message: "Here is the roster requested", payload: results });
+//     } catch (error) {
+//         console.log("Error", error)
+//         res.status(400).send(error);
+//     }
+// };
+
+
 exports.getFromUuid = async function (req, res, next) {
     try {
         var rosterUuid = req.body.rosterUuid || req.query.rosterUuid || "";
-        let query = { status: 'active', uuid:rosterUuid };
-        const results = await Roster.findOne(query);
-        res.status(201).send({ message: "Here is the roster requested", payload: results });
+        let query = { status: 'active', uuid: rosterUuid };
+
+        const aggregation = [
+            { $match: query },
+            {
+                $lookup: {
+                    from: "personas",
+                    let: { personaUuidList: "$personaUuids" },
+                    pipeline: [
+                        {
+                            $match: {
+                                $expr: {
+                                    $in: ["$uuid", "$$personaUuidList"]
+                                }
+                            }
+                        }
+                    ],
+                    as: "personas"
+                }
+            },
+            {
+                $project: {
+                    uuid: 1,
+                    name: 1,
+                    description: 1,
+                    context: 1,
+                    owners: 1,
+                    editors: 1,
+                    viewers: 1,
+                    personas: 1
+                }
+            }
+        ];
+
+        const results = await Roster.aggregate(aggregation).exec();
+
+        if (results && results.length > 0) {
+            res.status(201).send({ message: "Here is the roster requested", payload: results[0] });
+        } else {
+            res.status(404).send({ message: "Roster not found" });
+        }
     } catch (error) {
         console.log("Error", error)
         res.status(400).send(error);
     }
 };
-
 exports.create = async function (req, res, next) {
     try {
         // Combine rosters from body and query, ensuring no duplicates if necessary
