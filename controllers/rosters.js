@@ -91,6 +91,7 @@ exports.get = async function (req, res, next) {
                     viewerLink: 1,
                     editorLink: 1,
                     personas: 1,
+                    url:1,
                     personasCount: { $size: "$personas" },
                 }
             }
@@ -163,7 +164,8 @@ exports.getFromUuid = async function (req, res, next) {
                     editors: 1,
                     viewers: 1,
                     personaUuids: 1,
-                    personas: 1
+                    personas: 1,
+                    url:1,
                 }
             }
         ];

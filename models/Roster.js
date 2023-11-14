@@ -18,6 +18,12 @@ const RosterSchema = new Schema({
         default: "New Roster"
     },
 
+    url: {
+        type: String,
+        required: false,
+        default: null
+    },
+    
     //For the URL
     referenceName: {
         type: String,
