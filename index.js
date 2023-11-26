@@ -42,6 +42,9 @@ app.use('/rosters', require('./routes/rosters'));
 app.use('/services', require('./routes/services'));
 app.use('/google', require('./routes/google'));
 
+//Lexicon
+app.use('/lexicon', require('./routes/lexicon'));
+
 
 //Establish a 404 Not Found Custom Response
 app.use((req, res,next)=>{

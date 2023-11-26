@@ -80,5 +80,15 @@ function createJWT(account, source) {
     return { token, tokenDecoded };
 }
 
-module.exports = { checkAndAssignToken, validateAndRenewToken, createJWT };
+// Middleware to check if the user is an admin
+function verifyAdmin(req, res, next) {
+    const roles = req.tokenDecoded?.roles || [];
+    if (!roles.includes('admin')) {
+        return res.status(403).send({ message: "Access denied. Only admins can perform this action." });
+    }
+    next();
+}
+
+
+module.exports = { checkAndAssignToken, validateAndRenewToken, createJWT, verifyAdmin };
 
