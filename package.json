@@ -15,6 +15,7 @@
   "author": "Symaiotics Corporation",
   "license": "UNLICENSED",
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.10.2",
     "@azure/storage-blob": "^12.15.0",
     "archiver": "^6.0.1",
     "axios": "^1.4.0",

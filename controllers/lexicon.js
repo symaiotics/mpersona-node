@@ -6,7 +6,7 @@ const Lexicon = require('../models/Lexicon'); // Assuming Lexicon model is expor
 // Get all lexicon entries
 exports.getLexicon = async function (req, res, next) {
     try {
-        const lexiconEntries = await Lexicon.find({});
+        const lexiconEntries = await Lexicon.find({}).sort({code:1});
         res.status(200).json({message:'full lexicon', payload:lexiconEntries});
     } catch (error) {
         res.status(500).send({ message: "Error retrieving lexicon entries", error });

@@ -16,7 +16,15 @@ var LexiconSchema = new Schema({
     keywords: {
         type: [String],
         index: true // Optionally index the keywords array for better search performance
+    },
+    autoTranslated: {
+        type: Boolean,
+        default:false
+    },
+    validatedBy: { //username of validator
+        type: String,
     }
+
 }, {
     collection: 'lexicon',
     timestamps: { createdAt: 'momentCreated', updatedAt: 'momentUpdated' } // Use custom field names for timestamps

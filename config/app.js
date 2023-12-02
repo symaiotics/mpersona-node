@@ -97,27 +97,25 @@ if (process.env.DATASTORE == 'MongoDB' || process.env.DATASTORE == 'CosmosDB') {
 // });
 
 
-
-
-
+//Initiate OpenAI
 const OpenAI = require('openai');
-
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY // This is also the default, can be omitted
 });
 
+//Initiate Anthropic
+const Anthropic = require('@anthropic-ai/sdk')
+const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY, // defaults to process.env["ANTHROPIC_API_KEY"]
+});
 
 
 //New WSS
 const wss = new WebSocket.Server({ server });
-
-// Create an object to store WebSocket instances by UUID
-
-const clients = {};
+const clients = {}; // Create an object to store WebSocket instances by UUID
 
 const sendToClient = (uuid, session, type, message = null) => {
   const clientWs = clients[uuid];
-
   if (clientWs && clientWs.readyState === WebSocket.OPEN) {
     const response = JSON.stringify({ session, type, message });
     clientWs.send(response);
@@ -147,7 +145,8 @@ wss.on('connection', (ws) => {
         else if (data.type === 'prompt') {
           // Use the sendToClient function to send the pong response only to the client that sent the ping
           // console.log("Prompt Object", data)
-          prompt(data.uuid, data.session, data.model, data.temperature, data.systemPrompt, data.userPrompt, data.messageHistory, data.knowledgeProfileUuids);
+          console.log(data)
+          prompt(data.uuid, data.session, data.provider || 'openAi', data.model || 'gpt-4', data.temperature, data.systemPrompt, data.userPrompt, data.messageHistory, data.knowledgeProfileUuids);
         }
 
         else {
@@ -172,16 +171,15 @@ wss.on('connection', (ws) => {
 });
 
 //Execute an OpenAI prompt
-async function prompt(uuid, session, model, temperature, systemPrompt, userPrompt, messageHistory, knowledgeProfileUuids) {
+async function prompt(uuid, session, provider, model, temperature, systemPrompt, userPrompt, messageHistory, knowledgeProfileUuids) {
 
   //Enrich the prompt with some context data
   // userPrompt = "The date is " + new Date().toDateString() + "\n\n" + userPrompt + "\n\n";
-
-  console.log("User Prompt", userPrompt)
   let messages = [];
   if (messageHistory?.length) {
     messages = messageHistory;
   }
+
   else {
     messages = [
       {
@@ -195,12 +193,12 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
     ];
   }
 
+
+  //Get the Knowwledge Profiles information
+  //Retrieves the facts from the DB and appends them to the systemPrompt
   try {
     let knowledgePrompt = "Here are some additional facts which may be relevant to your answer.\n\n";
     knowledgePrompt = knowledgePrompt + '\n\nFacts:\nUse these facts in the preparation of your response ONLY if they are specifically relevant to the question. \nOtherwise ignore them completely. \nIf the question does not relate to these facts, do not use any information from these facts. \nIf the topics of the question do not relate, do not use! :\n\n';
-
-    //Get the Knowwledge Profiles information
-    //Retrieves the facts from the DB and appends them to the systemPrompt
     let facts = [];
     let topScore = 0;
     let addedKnowledge = false;
@@ -216,10 +214,8 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
           }
         })
         addedKnowledge = true;
-
       }
     }
-    console.log("Added", addedKnowledge)
 
     //Add in the system prompt, if knowledge prompt returned
     if (addedKnowledge) {
@@ -231,24 +227,41 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
       )
     }
 
-
+    //Works with both openAi and anthropic
     var fullPrompt = {
       model: model,
-      messages: messages,
       temperature: parseFloat(temperature) || 0.5,
       stream: true,
+    };
+
+    //Initiate the stream
+    let responseStream;
+    if (provider === 'openAi') {
+      fullPrompt.messages = messages;
+      responseStream = await openai.chat.completions.create(fullPrompt);
+    } else if (provider === 'anthropic') {
+      fullPrompt.prompt = formatAnthropic(messages);
+      fullPrompt.max_tokens_to_sample = 4096; //Recommended for Claude 2.1 
+      responseStream = await anthropic.completions.create(fullPrompt);
     }
-
-    console.log("Full Prompt", fullPrompt)
-
     // const responseStream = await openai.createChatCompletion(fullPrompt, { responseType: 'stream' });
-    const responseStream = await openai.chat.completions.create(fullPrompt);
 
+
+    //Handle the Streamed tokens in response and return them to the client
     for await (const part of responseStream) {
-      console.log(part.choices[0].delta);
+
       try {
-        if (part?.choices?.[0]?.delta?.content) sendToClient(uuid, session, "message", part.choices[0].delta.content)
-        else sendToClient(uuid, session, "EOM", null)
+
+        if (provider === 'openAi') {
+          if (part?.choices?.[0]?.delta?.content) sendToClient(uuid, session, "message", part.choices[0].delta.content)
+          else sendToClient(uuid, session, "EOM", null)
+        }
+
+        if (provider === 'anthropic') {
+          if (part.completion && !part.stop_reason) sendToClient(uuid, session, "message", part.completion)
+          if (part.stop_reason) sendToClient(uuid, session, "EOM", null);
+        }
+
       }
       catch (error) {
         //Send error back to the client
@@ -259,6 +272,8 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
         sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
         console.error('Could not JSON parse stream message', message, errorObj);
       }
+
+
     }
 
     //Old V3 OpenAI API
@@ -310,7 +325,19 @@ async function prompt(uuid, session, model, temperature, systemPrompt, userPromp
   }
 }
 
+// prompt: `${Anthropic.HUMAN_PROMPT} How many toes do dogs have?${Anthropic.AI_PROMPT}`,
+function formatAnthropic(messageHistory) {
+  let anthropicString = "";
+  messageHistory.forEach((message, index) => {
+    const prompt = message.role === 'system'
+      ? (index === 0 ? '' : Anthropic.AI_PROMPT)
+      : Anthropic.HUMAN_PROMPT;
+    anthropicString += prompt + message.content;
 
+  });
+  anthropicString +=  Anthropic.AI_PROMPT;
+  return anthropicString; // Return the resulting string
+}
 
 //Export the app for use on the index.js page
 module.exports = { app, wss, sendToClient, prompt, openai };
