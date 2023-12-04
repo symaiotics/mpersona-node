@@ -1,6 +1,7 @@
 var mongoose = require('mongoose');
+var Schema = mongoose.Schema;
 
-var accountSchema = new mongoose.Schema({
+var AccountSchema = new mongoose.Schema({
 
   //User information
   uuid: { type: String, unique: true, required: true }, //the unique username of this user
@@ -15,9 +16,9 @@ var accountSchema = new mongoose.Schema({
   active: { type: Boolean, required: true }, //active:false means the account is paused or suspend the account temporarily
 
   //Integrations
-  openAi: { type: String, required: false }, 
-  shopify: { type: String, required: false },   
-  gmail: { type: String, required: false },   
+  openAi: { type: String, required: false },
+  shopify: { type: String, required: false },
+  gmail: { type: String, required: false },
 
   //Account settings info
   momentFirstLogin: { type: Date, required: false }, //the moment of the first login
@@ -35,6 +36,9 @@ var accountSchema = new mongoose.Schema({
   momentDeleted: Date,
 }, { collection: 'accounts' });
 
-module.exports = {
-  accountSchema
-};
+
+
+const Account = mongoose.model('Account', AccountSchema);
+module.exports = Account;
+
+

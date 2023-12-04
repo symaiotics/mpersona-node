@@ -28,28 +28,26 @@ The application also requires environment variables to operate
 The storage account requires a container named /images to be created and publicly accessible as read only.
 
 
-## mPersona License Agreement
+# Application Server License
+The MIT License (MIT)
 
-This software is provided "as is," without warranty of any kind, express or implied. In no event shall the author be held liable for any damages arising from the use of the software.
+Copyright (c) 2023-current Symaiotics Corporation.
 
-1. Definitions:
-   "Organization" refers to a legal entity, excluding individuals.
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
 
-2. Grant of License:
-   Subject to the terms and conditions of this License, Symaiotics Corporation grants to you a non-exclusive, non-transferable license to use the software.
+The above copyright notice and this permission notice shall be included in
+all copies or substantial portions of the Software.
 
-3. Restrictions:
-   - You may not use this software for commercial purposes if you are part of an Organization with more than 100 people.
-   - You may not distribute, sublicense, lease, rent, sell, or otherwise transfer the software or any of its components to any third party.
-   - You may not modify, decompile, disassemble, or reverse engineer the software.
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN
+THE SOFTWARE.
 
-4. Termination:
-   This License is effective until terminated. Your rights under this License will terminate automatically without notice from Symaiotics Corporation if you fail to comply with any term(s) of this License.
-
-5. Governing Law:
-   This License will be governed by and construed in accordance with the laws of Ontario, Canada, excluding its conflict of law principles.
-
-6. Miscellaneous:
-   If any provision of this License is held to be unenforceable, that provision will be removed, and the remaining provisions will remain in full force.
-
-END OF LICENSE

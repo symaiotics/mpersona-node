@@ -8,11 +8,6 @@ const KnowledgeProfile = require('../models/KnowledgeProfile');
 const multer = require('multer');
 const { BlobServiceClient } = require('@azure/storage-blob');
 
-// const { Configuration, OpenAIApi } = require("openai");
-// const configuration = new Configuration({
-//     apiKey: process.env.OPENAI_API_KEY,
-// });
-// const openai = new OpenAIApi(configuration);
 
 // Gets the Knowledge Profiles which are public 
 exports.getKnowledgeProfiles = async function (req, res, next) {

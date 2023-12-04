@@ -1,7 +1,7 @@
 //Import Required Libraries for this .js
 const express = require("express");
 const path = require('path');
-const {app} = require("./config/app.js");
+const { app } = require("./config/app.js");
 
 //Bring in custom error handling
 const apiErrorHandler = require('./error/apiErrorHandler');
@@ -12,42 +12,37 @@ app.get('/favicon.ico', (req, res) => res.status(204));
 app.use('/', express.static(path.join(__dirname, '/public')))
 
 //Register the routes
-//Initial Release
-app.use('/healthcheck', require('./routes/healthcheck'));
-app.use('/personas', require('./routes/personas'));
-app.use('/categories', require('./routes/categories'));
-
 //User management
 app.use('/accounts', require('./routes/accounts'));
-
-//Generate prompts
-// app.use('/prompts', require('./routes/prompts'));
-
-//Upload files
-app.use('/files', require('./routes/files'));
-
-//Generate prompts
-app.use('/workStreams', require('./routes/workStreams'));
-
-//Facts
-app.use('/knowledgeProfiles', require('./routes/knowledgeProfiles'));
+app.use('/categories', require('./routes/categories'));
 
 //Facts
 app.use('/facts', require('./routes/facts'));
 
-//Rosters
-app.use('/rosters', require('./routes/rosters'));
+//Upload files
+app.use('/files', require('./routes/files'));
 
 //Misc services
-app.use('/services', require('./routes/services'));
 app.use('/google', require('./routes/google'));
+app.use('/healthcheck', require('./routes/healthcheck'));
+
+//Knowledge Profiles
+app.use('/knowledgeProfiles', require('./routes/knowledgeProfiles'));
 
 //Lexicon
 app.use('/lexicon', require('./routes/lexicon'));
 
+app.use('/personas', require('./routes/personas'));
+
+//Rosters
+app.use('/rosters', require('./routes/rosters'));
+
+//Work Streams
+app.use('/workStreams', require('./routes/workStreams'));
+
 
 //Establish a 404 Not Found Custom Response
-app.use((req, res,next)=>{
+app.use((req, res, next) => {
     const error = new Error('This site was not found. Perhaps you want to call login?');
     error.status = 404;
     next(error);

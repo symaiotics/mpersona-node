@@ -5,8 +5,6 @@
 
 const Fact = require('../models/Fact');
 
-
-
 // Gets all the user's facts
 exports.getFacts = async function (req, res, next) {
     try {

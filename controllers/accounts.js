@@ -3,18 +3,48 @@
 The accounts controller contains the logic which processes API method received by the route
 */
 //Load the specific controller plugins
-const ApiError = require('../error/ApiError');
 const uuidv4 = require('uuid').v4;
+
+//Error Handling
+const ApiError = require('../error/ApiError');
 const promiseHandler = require('../error/promiseHandler');
+
+//Account Security
 const jwt = require('jsonwebtoken');
 const createJWT = require('../middleware/verify').createJWT;
-
 const bcrypt = require('bcrypt');
 
 //Load the Models
-const mongoose = require("../config/mongoose").mongoose;
-const accountSchema = require("../models/account").accountSchema
-var Account = mongoose.model('accounts', accountSchema);//
+const Account = require('../models/account');
+const MailingList = require('../models/MailingList');
+
+exports.joinMailingList = async function (req, res, next) {
+    try {
+        let emailAddress = req.body.emailAddress || req.query.emailAddress;
+
+        if (!emailAddress || !validateEmail(emailAddress)) {
+            return res.status(400).json({ message: 'Invalid or No Email Address Provided' });
+        }
+
+        let newEmail = MailingList({ emailAddress });
+        let result = await promiseHandler(newEmail.save(), 5000);
+
+        if (result.success) {
+            res.status(200).json({ message: "success", payload: result });
+        } else {
+            res.status(500).json({ message: "failure" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Server Error", error: error.message });
+    }
+};
+
+
+function validateEmail(email) {
+    if (!email) return false;
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return re.test(String(email).toLowerCase());
+  }
 
 // Accepts a new account and saves it to the database
 exports.createNewAccount = async function (req, res, next) {
@@ -138,4 +168,3 @@ exports.login = async function (req, res, next) {
     }
 };
 
- 
