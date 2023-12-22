@@ -24,6 +24,8 @@ The application also requires environment variables to operate
 - MPERSONA_ATLAS= //A connection string to a valid MongoDB instance. I recommend using an Atlas instance
 - OPEN_API_KEY= //Your API key to interact with your own instance of OpenAI's API
 - AZURE_STORAGE_CONNECTION_STRING = //Your Azure Storage connection string (not key)
+- AZURE_OPENAI_KEY= //Your Azure OpenAI Key
+- AZURE_OPENAI_ENDPOINT=// Your endpoint, in this format https://[].openai.azure.com/
 
 The storage account requires a container named /images to be created and publicly accessible as read only.
 

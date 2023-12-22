@@ -1,7 +1,10 @@
-//Generating JWT Secrets
+//Generating JWT Secrets if you dont have one already
 // const crypto = require('crypto');
 // const secret = crypto.randomBytes(64).toString('hex');
 // console.log('signing secret', secret)
+
+//Establish local environment variables
+const dotenv = require('dotenv').config()
 
 //Create the app object
 const express = require("express");
@@ -11,15 +14,43 @@ const http = require('http');
 const url = require('url');
 const WebSocket = require('ws');
 const uuidv4 = require('uuid').v4;
+const { Readable } = require('stream');
 
-const factsController = require('../controllers/facts')
+//Establish the AI Services
+let services = { openAi: false, azureOpenAi: false, anthropic: false }
+let openai, anthropic, azureEndpoint, azureApiKey, azureOpenAiStream;
+//Initiate OpenAI
+const OpenAI = require('openai');
+if (process.env.OPENAI_API_KEY) {
+  services.openAi = true;
+  openai = new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY // This is also the default, can be omitted
+  });
+}
 
+//Initiate Anthropic
+const Anthropic = require('@anthropic-ai/sdk')
+if (process.env.ANTHROPIC_API_KEY) {
+  services.anthropic = true;
+  anthropic = new Anthropic({
+    apiKey: process.env.ANTHROPIC_API_KEY, // defaults to process.env["ANTHROPIC_API_KEY"]
+  });
+}
+
+const { OpenAIClient, AzureKeyCredential } = require("@azure/openai");
+//Initiate Azure OpenAI
+if (process.env.AZURE_OPENAI_KEY) {
+  services.azureOpenAi = true;
+  azureEndpoint = process.env["AZURE_OPENAI_ENDPOINT"];
+  azureApiKey = process.env["AZURE_OPENAI_KEY"];
+
+}
+
+console.log("Services activated:", services)
 //Process JSON and urlencoded parameters
 app.use(express.json({ extended: true, limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' })); //The largest incoming payload
 
-//Establish local environment variables
-const dotenv = require('dotenv').config()
 
 //Select the default port
 const port = process.env.PORT || 3000;
@@ -47,12 +78,9 @@ app.use(cors(
 const logger = require("../middleware/logger").logger;
 app.use(logger)
 
-
-
 //Create HTTP Server
 const server = http.createServer(app);
-
-server.listen(port, () => console.log(`Simple app listening at http://localhost:${port}`))
+server.listen(port, () => console.log(`mPersona Node.js service listening at http://localhost:${port}`))
 
 // app.use((req, res, next) => {
 //   console.log('Protocol:', req.protocol);
@@ -75,39 +103,6 @@ if (process.env.DATASTORE == 'MongoDB' || process.env.DATASTORE == 'CosmosDB') {
     if (err) throw err;
   });
 }
-
-
-//Old WSS 2023-09-08
-// // Create a WebSocket server instance, sharing the HTTP server
-// const wss = new WebSocket.Server({ server });
-
-// // Set up an event listener for incoming WebSocket connections
-// wss.on('connection', (ws) => {
-//   console.log('Client connected');
-
-//   ws.uuid = uuidv4();
-//   ws.send(JSON.stringify({ uuid: ws.uuid }));
-
-//   // Handle messages received from clients
-//   ws.on('message', (message) => {
-
-//     // Send a message back to the client
-//     ws.send(JSON.stringify({message:'Received'}));
-//   });
-// });
-
-
-//Initiate OpenAI
-const OpenAI = require('openai');
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY // This is also the default, can be omitted
-});
-
-//Initiate Anthropic
-const Anthropic = require('@anthropic-ai/sdk')
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY, // defaults to process.env["ANTHROPIC_API_KEY"]
-});
 
 
 //New WSS
@@ -144,8 +139,6 @@ wss.on('connection', (ws) => {
 
         else if (data.type === 'prompt') {
           // Use the sendToClient function to send the pong response only to the client that sent the ping
-          // console.log("Prompt Object", data)
-          console.log(data)
           prompt(data.uuid, data.session, data.provider || 'openAi', data.model || 'gpt-4', data.temperature, data.systemPrompt, data.userPrompt, data.messageHistory, data.knowledgeProfileUuids);
         }
 
@@ -196,6 +189,7 @@ async function prompt(uuid, session, provider, model, temperature, systemPrompt,
 
   //Get the Knowwledge Profiles information
   //Retrieves the facts from the DB and appends them to the systemPrompt
+
   try {
     let knowledgePrompt = "Here are some additional facts which may be relevant to your answer.\n\n";
     knowledgePrompt = knowledgePrompt + '\n\nFacts:\nUse these facts in the preparation of your response ONLY if they are specifically relevant to the question. \nOtherwise ignore them completely. \nIf the question does not relate to these facts, do not use any information from these facts. \nIf the topics of the question do not relate, do not use! :\n\n';
@@ -236,77 +230,64 @@ async function prompt(uuid, session, provider, model, temperature, systemPrompt,
 
     //Initiate the stream
     let responseStream;
-    if (provider === 'openAi') {
+    if (services.openAi && provider === 'openAi') {
       fullPrompt.messages = messages;
       responseStream = await openai.chat.completions.create(fullPrompt);
-    } else if (provider === 'anthropic') {
+    }
+
+    else if (services.anthropic && provider === 'anthropic') {
       fullPrompt.prompt = formatAnthropic(messages);
       fullPrompt.max_tokens_to_sample = 4096; //Recommended for Claude 2.1 
       responseStream = await anthropic.completions.create(fullPrompt);
     }
-    // const responseStream = await openai.createChatCompletion(fullPrompt, { responseType: 'stream' });
 
-
-    //Handle the Streamed tokens in response and return them to the client
-    for await (const part of responseStream) {
-
-      try {
-
-        if (provider === 'openAi') {
-          if (part?.choices?.[0]?.delta?.content) sendToClient(uuid, session, "message", part.choices[0].delta.content)
-          else sendToClient(uuid, session, "EOM", null)
-        }
-
-        if (provider === 'anthropic') {
-          if (part.completion && !part.stop_reason) sendToClient(uuid, session, "message", part.completion)
-          if (part.stop_reason) sendToClient(uuid, session, "EOM", null);
-        }
-
-      }
-      catch (error) {
-        //Send error back to the client
-        var errorObj = {
-          status: error?.response?.status,
-          statusText: error?.response?.statusText
-        }
-        sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
-        console.error('Could not JSON parse stream message', message, errorObj);
-      }
-
-
+    else if (services.azureOpenAi && provider === 'azureOpenAi') {
+      fullPrompt = { temperature: parseFloat(temperature) || 0.5 }
+      const client = new OpenAIClient(azureEndpoint, new AzureKeyCredential(azureApiKey));
+      responseStream = await client.listChatCompletions(model, messages, fullPrompt);
     }
 
-    //Old V3 OpenAI API
-    // responseStream.data.on('data', data => {
+    //Handle the Streamed tokens in response and return them to the client
+    if ((services.openAi && provider === 'openAi') || (services.anthropic && provider === 'anthropic')) {
+      for await (const part of responseStream) {
+        try {
+          if (provider === 'openAi') {
+            if (part?.choices?.[0]?.delta?.content) sendToClient(uuid, session, "message", part.choices[0].delta.content)
+            else sendToClient(uuid, session, "EOM", null)
+          }
 
-    //   const lines = data.toString().split('\n').filter(line => line.trim() !== '');
-    //   for (const line of lines) {
-    //     const message = line.replace(/^data: /, '');
-    //     if (message === '[DONE]') {
-    //       //Send EOM back to the client
-    //       sendToClient(uuid, session, "EOM", null)
-    //     }
-    //     else {
-    //       try {
-    //         const parsed = JSON.parse(message).choices?.[0]?.delta?.content;
-    //         if (parsed && parsed !== null && parsed !== 'null' && parsed !== 'undefined' && parsed !== undefined) {
-    //           //Send the fragment back to the correct client
-    //           // console.log(parsed)
-    //           sendToClient(uuid, session, "message", parsed)
-    //         }
+          if (provider === 'anthropic') {
+            if (part.completion && !part.stop_reason) sendToClient(uuid, session, "message", part.completion)
+            if (part.stop_reason) sendToClient(uuid, session, "EOM", null);
+          }
+        }
+        catch (error) {
+          //Send error back to the client
+          var errorObj = {
+            status: error?.response?.status,
+            statusText: error?.response?.statusText
+          }
+          sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
+          console.error('Could not JSON parse stream message', message, errorObj);
+        }
+      }
+    }
 
-    //       } catch (error) {
-    //         //Send error back to the client
-    //         var errorObj = {
-    //           status: error?.response?.status,
-    //           statusText: error?.response?.statusText
-    //         }
-    //         sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
-    //         console.error('Could not JSON parse stream message', message, errorObj);
-    //       }
-    //     }
-    //   }
-    // });
+    if (services.azureOpenAi && provider == 'azureOpenAi') {
+      const stream = Readable.from(responseStream);
+      stream.on('data', (event) => {
+        for (const choice of event.choices) {
+          if (choice.delta?.content !== undefined) {
+            sendToClient(uuid, session, "message", choice.delta?.content)
+          }
+        }
+      });
+
+      stream.on('end', () => {
+        sendToClient(uuid, session, "EOM", null);
+      });
+    }
+
   }
   catch (error) {
     console.log("Error", error)
@@ -335,9 +316,9 @@ function formatAnthropic(messageHistory) {
     anthropicString += prompt + message.content;
 
   });
-  anthropicString +=  Anthropic.AI_PROMPT;
+  anthropicString += Anthropic.AI_PROMPT;
   return anthropicString; // Return the resulting string
 }
 
 //Export the app for use on the index.js page
-module.exports = { app, wss, sendToClient, prompt, openai };
+module.exports = { app, wss, sendToClient, prompt };

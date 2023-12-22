@@ -23,7 +23,6 @@ app.use('/facts', require('./routes/facts'));
 app.use('/files', require('./routes/files'));
 
 //Misc services
-app.use('/google', require('./routes/google'));
 app.use('/healthcheck', require('./routes/healthcheck'));
 
 //Knowledge Profiles
