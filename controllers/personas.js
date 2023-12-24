@@ -55,9 +55,6 @@ exports.getPersonas = async function (req, res, next) {
             };
         }
 
-
-
-
         var aggregation = [
             { $match: query },
             {
@@ -253,6 +250,8 @@ exports.updatePersonas = async function (req, res, next) {
         res.status(400).send(error);
     }
 };
+
+
 exports.deletePersonas = async function (req, res, next) {
     try {
         var personas = req.body.personas || req.query.personas || [];

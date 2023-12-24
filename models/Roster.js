@@ -23,7 +23,7 @@ const RosterSchema = new Schema({
         required: false,
         default: null
     },
-    
+
     //For the URL
     referenceName: {
         type: String,
@@ -53,6 +53,19 @@ const RosterSchema = new Schema({
         default: []
     },
 
+    //Knowledge Sets UUIDs - Preferred method
+    knowledgeSetUuids: {
+        type: Array,
+        default: []
+    },
+
+    //Load the various assignment options 
+    assignmentUuids: {
+        type: Array,
+        default: []
+    },
+
+
     //Copies
     personas: {
         type: Array,
@@ -74,6 +87,14 @@ const RosterSchema = new Schema({
 
     publishedBy: {
         type: String,
+    },
+
+    //Does this roster require a user to be logged in, or is it fully open to the public?
+    //How is this different from published? Published is visibility to other people. loginRequired can also be true which makes it visible but not accessible
+
+    loginRequired: {
+        type: Boolean,
+        default: false,
     },
 
     owners: {
@@ -119,13 +140,9 @@ const RosterSchema = new Schema({
         enum: ['active', 'inactive'],
         default: 'active'
     },
-
-    momentCreated: {
-        type: Date,
-        default: Date.now
-    },
-
-
+}, {
+    collection: 'rosters',
+    timestamps: { createdAt: 'momentCreated', updatedAt: 'momentUpdated' } // Use custom field names for timestamps
 });
 
 const Roster = mongoose.model('Roster', RosterSchema);

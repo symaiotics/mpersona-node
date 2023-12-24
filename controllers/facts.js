@@ -120,7 +120,8 @@ exports.getFactsFromKnowledgeProfiles = async function (searchString, knowledgeP
 
 
 //Create text indexes automatically
-createTextIndex()
+//Remove for V2.
+// createTextIndex()
 
 async function createTextIndex() {
     try {
