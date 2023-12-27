@@ -152,9 +152,9 @@ exports.updateKnowledgeSets = async function (req, res, next) {
             const isEditor = knowledgeSet.editors.includes(username);
             const isAdmin = roles.includes('admin');
 
-            if (!isEditor && !isAdmin) {
-                throw ApiError.forbidden("You do not have permission to update this knowledge set.");
-            }
+            // if (!isEditor && !isAdmin) {
+            //     throw ApiError.forbidden("You do not have permission to update this knowledge set.");
+            // }
 
             // const updateOps = {};
             // for (const [key, value] of Object.entries(update)) {

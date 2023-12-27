@@ -152,9 +152,9 @@ exports.updateDocuments = async function (req, res, next) {
             const isEditor = document.editors.includes(username);
             const isAdmin = roles.includes('admin');
 
-            if (!isEditor && !isAdmin) {
-                throw ApiError.forbidden("You do not have permission to update this Document.");
-            }
+            // if (!isEditor && !isAdmin) {
+            //     throw ApiError.forbidden("You do not have permission to update this Document.");
+            // }
 
             // const updateOps = {};
             // for (const [key, value] of Object.entries(update)) {

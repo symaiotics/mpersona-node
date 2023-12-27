@@ -153,9 +153,9 @@ exports.updateTags = async function (req, res, next) {
             const isEditor = tag.editors.includes(username);
             const isAdmin = roles.includes('admin');
 
-            if (!isEditor && !isAdmin) {
-                throw ApiError.forbidden("You do not have permission to update this Tag.");
-            }
+            // if (!isEditor && !isAdmin) {
+            //     throw ApiError.forbidden("You do not have permission to update this Tag.");
+            // }
 
             // const updateOps = {};
             // for (const [key, value] of Object.entries(update)) {
