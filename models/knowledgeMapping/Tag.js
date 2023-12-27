@@ -8,7 +8,7 @@ const localizedField = require('../common/localizedField');
 const TagSchema = new Schema({
     //Textual name and description
     name: localizedField('name'),
-    description: localizedField('description'),
+  
     ...administrativeFields
 }, {
     collection: 'metadataTags',
