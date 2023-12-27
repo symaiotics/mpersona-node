@@ -2,40 +2,55 @@
 
 const KnowledgeSet = require('../../models/knowledgeMapping/KnowledgeSet');
 const Roster = require('../../models/Roster');
+const ApiError = require('../../error/ApiError');
+const logger = require('../../middleware/logger');
+const uuidv4 = require('uuid').v4;
+
 
 exports.getKnowledgeSets = async function (req, res, next) {
     try {
-        var viewAll = req.body.viewAll || req.query.viewAll || false;
-        var username = req?.tokenDecoded?.username || null;
-        var roles = req?.tokenDecoded?.roles || [];
+        const viewAll = req.body.viewAll || req.query.viewAll || false;
+        const username = req?.tokenDecoded?.username || null;
+        const roles = req?.tokenDecoded?.roles || [];
+        const rosterUuid = req.body.rosterUuid || req.query.rosterUuid;
 
-        const baseQuery = { status: 'active' };
-        var query;
+        let baseQuery = { status: 'active' };
 
-        if (roles.includes('admin') && viewAll) {
-            query = baseQuery;
-        } else if (username) {
-            query = {
-                ...baseQuery,
-                $or: [
-                    { editors: username },
-                    { viewers: username },
-                    { publishStatus: 'published' }
-                ]
-            };
+        if (rosterUuid) {
+            const roster = await Roster.findOne({ uuid: rosterUuid });
+            if (!roster) {
+                return next(ApiError.notFound("Roster not found."));
+            }
+            const knowledgeSetUuids = roster.knowledgeSetUuids || [];
+            baseQuery = { ...baseQuery, uuid: { $in: knowledgeSetUuids } };
         } else {
-            query = {
-                ...baseQuery,
-                publishStatus: 'published'
-            };
+            if (roles.includes('admin') && viewAll) {
+                baseQuery = baseQuery;
+            } else if (username) {
+                baseQuery = {
+                    ...baseQuery,
+                    $or: [
+                        { owners: username },
+                        { editors: username },
+                        { viewers: username },
+                        { publishStatus: 'published' }
+                    ]
+                };
+            } else {
+                baseQuery = {
+                    ...baseQuery,
+                    publishStatus: 'published'
+                };
+            }
         }
 
-        var aggregation = [
-            { $match: query },
+        const aggregation = [
+            { $match: baseQuery },
             {
                 $addFields: {
-                    isEditor: username !== null ? { $in: [username, { $ifNull: ["$editors", []] }] } : false,
-                    isViewer: username !== null ? { $in: [username, { $ifNull: ["$viewers", []] }] } : false,
+                    isOwner: username ? { $in: [username, { $ifNull: ["$owners", []] }] } : false,
+                    isEditor: username ? { $in: [username, { $ifNull: ["$editors", []] }] } : false,
+                    isViewer: username ? { $in: [username, { $ifNull: ["$viewers", []] }] } : false,
                     isAdmin: { $literal: roles.includes('admin') }
                 }
             }
@@ -44,32 +59,27 @@ exports.getKnowledgeSets = async function (req, res, next) {
         if (!roles.includes('admin')) {
             aggregation.push({
                 $project: {
-                    editors: 0,
-                    viewers: 0,
                     owners: 0,
+                    editors: 0,
+                    viewers: 0
                 }
             });
         }
 
-        var knowledgeSets = await KnowledgeSet.aggregate(aggregation).sort('name');
+        const knowledgeSets = await KnowledgeSet.aggregate(aggregation).sort({'momentUpdated':-1});
         res.status(200).json({ message: "Here are all the active knowledge sets", payload: knowledgeSets });
-
     } catch (error) {
-        console.error(error);
-        res.status(400).json({ error: error });
+        next(ApiError.internal("An error occurred while retrieving knowledge sets"));
     }
 };
-
 
 exports.createKnowledgeSets = async function (req, res, next) {
     try {
         var knowledgeSetsData = req.body.knowledgeSets || req.query.knowledgeSets || [];
-        var rosterUuid = req.body.rosterUuid || req.query.rosterUuid;
+        var rosterUuid = req.body.rosterUuid || req.query.rosterUuid; ///this is optional
 
-        if (!rosterUuid) {
-            return res.status(400).json({ message: "Roster UUID must be provided." });
-        }
-
+        console.log(knowledgeSetsData)
+        console.log(rosterUuid)
         if (!Array.isArray(knowledgeSetsData)) {
             knowledgeSetsData = [knowledgeSetsData];
         }
@@ -82,30 +92,44 @@ exports.createKnowledgeSets = async function (req, res, next) {
                 knowledgeSet.viewers = [req.tokenDecoded.username];
                 knowledgeSet.createdBy = req.tokenDecoded.username;
             }
+            //Assign a uuid if not assigned by the UI
+            if (!knowledgeSet.uuid) knowledgeSet.uuid = uuidv4()
         });
 
         // Attempt to insert the new knowledge sets
-        var results = await KnowledgeSet.insertMany(knowledgeSetsData);
+        var results = await KnowledgeSet.insertMany(knowledgeSetsData, { runValidators: true });
+
         var knowledgeSetUuids = results.map(knowledgeSet => knowledgeSet.uuid);
 
-        // Attempt to update the roster with the new knowledge set UUIDs, ensuring uniqueness
-        var rosterUpdateResult = await Roster.updateOne(
-            { uuid: rosterUuid },
-            { $addToSet: { knowledgeSetUuids: { $each: knowledgeSetUuids } } }
-        );
 
-        // If the roster update was not successful, remove the inserted knowledge sets
-        if (!rosterUpdateResult.nModified) {
-            await KnowledgeSet.deleteMany({ uuid: { $in: knowledgeSetUuids } });
-            throw new Error("Failed to update the roster with knowledge set UUIDs.");
+        if (rosterUuid) {
+            // Attempt to update the roster with the new knowledge set UUIDs, ensuring uniqueness
+            var rosterUpdateResult = await Roster.updateOne(
+                { uuid: rosterUuid },
+                { $addToSet: { knowledgeSetUuids: { $each: knowledgeSetUuids } } }
+            );
+
+            // Log the update result for debugging
+            console.log('Roster update result:', rosterUpdateResult);
+
+            // Check if the roster document was found
+            if (!rosterUpdateResult.matchedCount) {
+                throw ApiError.internal("Roster not found.");
+            }
+
+            // If the roster update was not successful, remove the inserted knowledge sets
+            if (!rosterUpdateResult.modifiedCount) {
+                await KnowledgeSet.deleteMany({ uuid: { $in: knowledgeSetUuids } });
+                throw ApiError.internal("Failed to update the roster with knowledge set UUIDs.");
+            }
         }
 
         res.status(201).json({ message: "Created all the provided knowledge sets", payload: results });
     } catch (error) {
-        console.error(error);
-        res.status(400).json({ error: error.message });
+        next(error instanceof ApiError ? error : ApiError.internal("An error occurred while creating knowledge sets"));
     }
 };
+
 
 exports.updateKnowledgeSets = async function (req, res, next) {
     try {
@@ -114,48 +138,42 @@ exports.updateKnowledgeSets = async function (req, res, next) {
         var roles = req.tokenDecoded?.roles || [];
 
         if (!Array.isArray(knowledgeSetsUpdates)) {
-            return res.status(400).json({ message: "Knowledge sets updates should be an array." });
+            throw ApiError.badRequest("Knowledge sets updates should be an array.");
         }
 
         // Process each knowledge set update
         for (const update of knowledgeSetsUpdates) {
-            // Fetch the current knowledge set to check permissions
             let knowledgeSet = await KnowledgeSet.findOne({ uuid: update.uuid });
 
             if (!knowledgeSet) {
-                return res.status(404).json({ message: `Knowledge set with UUID ${update.uuid} not found.` });
+                throw ApiError.notFound(`Knowledge set with UUID ${update.uuid} not found.`);
             }
 
-            // Check if the user is an editor or an admin
             const isEditor = knowledgeSet.editors.includes(username);
             const isAdmin = roles.includes('admin');
 
             if (!isEditor && !isAdmin) {
-                return res.status(403).json({ message: "You do not have permission to update this knowledge set." });
+                throw ApiError.forbidden("You do not have permission to update this knowledge set.");
             }
 
-            // Prepare the update operations
-            const updateOps = {};
-            for (const [key, value] of Object.entries(update)) {
-                if (Array.isArray(value)) {
-                    // Use $addToSet for adding unique elements to arrays
-                    updateOps['$addToSet'] = { [key]: { $each: value } };
-                } else {
-                    // Use $set for updating non-array fields
-                    updateOps['$set'] = { [key]: value };
-                }
-            }
+            // const updateOps = {};
+            // for (const [key, value] of Object.entries(update)) {
+            //     if (Array.isArray(value)) {
+            //         updateOps['$addToSet'] = { [key]: { $each: value } };
+            //     } else {
+            //         updateOps['$set'] = { [key]: value };
+            //     }
+            // }
 
-            // Perform the update operation
-            await KnowledgeSet.updateOne({ uuid: update.uuid }, updateOps);
+            await KnowledgeSet.updateOne({ uuid: update.uuid }, update);
         }
 
         res.status(200).json({ message: "Knowledge sets updated successfully." });
     } catch (error) {
-        console.error(error);
-        res.status(400).json({ error: error.message });
+        next(error instanceof ApiError ? error : ApiError.internal("An error occurred while updating knowledge sets"));
     }
 };
+
 
 exports.deleteKnowledgeSets = async function (req, res, next) {
     try {
@@ -164,12 +182,11 @@ exports.deleteKnowledgeSets = async function (req, res, next) {
         var roles = req.tokenDecoded?.roles || [];
 
         if (!Array.isArray(knowledgeSetUuids)) {
-            return res.status(400).json({ message: "Knowledge set UUIDs should be an array." });
+            throw ApiError.badRequest("Knowledge set UUIDs should be an array.");
         }
 
         // Process each knowledge set UUID for deletion
         for (const uuid of knowledgeSetUuids) {
-            // Fetch the current knowledge set to check permissions
             let knowledgeSet = await KnowledgeSet.findOne({ uuid: uuid });
 
             if (!knowledgeSet) {
@@ -177,47 +194,48 @@ exports.deleteKnowledgeSets = async function (req, res, next) {
                 continue;
             }
 
-            // Check if the user is an editor or an admin
             const isEditor = knowledgeSet.editors.includes(username);
             const isAdmin = roles.includes('admin');
 
             if (!isEditor && !isAdmin) {
-                return res.status(403).json({ message: "You do not have permission to delete this knowledge set." });
+                throw ApiError.forbidden("You do not have permission to delete this knowledge set.");
             }
 
-            // Perform the delete operation
+            // Delete the knowledge set
             await KnowledgeSet.deleteOne({ uuid: uuid });
+
+            // Remove the uuid from the roster's knowledgeSetUuids
+            await Roster.updateMany(
+                { knowledgeSetUuids: uuid },
+                { $pull: { knowledgeSetUuids: uuid } }
+            );
         }
 
         res.status(200).json({ message: "Knowledge sets deleted successfully." });
     } catch (error) {
-        console.error(error);
-        res.status(400).json({ error: error.message });
+        next(error instanceof ApiError ? error : ApiError.internal("An error occurred while deleting knowledge sets"));
     }
 };
 
 exports.manageRoles = async function (req, res, next) {
     try {
-        var { uuid, editorsToAdd, editorsToRemove, viewersToAdd, viewersToRemove } = req.body;
+        var { knowledgeSetUuid, editorsToAdd, editorsToRemove, viewersToAdd, viewersToRemove } = req.body;
         var username = req.tokenDecoded?.username;
         var roles = req.tokenDecoded?.roles || [];
 
-        // Fetch the current knowledge set to check permissions
-        let knowledgeSet = await KnowledgeSet.findOne({ uuid: uuid });
+        let knowledgeSet = await KnowledgeSet.findOne({ uuid: knowledgeSetUuid });
 
         if (!knowledgeSet) {
-            return res.status(404).json({ message: "Knowledge set not found." });
+            throw ApiError.notFound("Knowledge set not found.");
         }
 
-        // Check if the user is an editor or an admin
         const isEditor = knowledgeSet.editors.includes(username);
         const isAdmin = roles.includes('admin');
 
         if (!isEditor && !isAdmin) {
-            return res.status(403).json({ message: "You do not have permission to manage roles for this knowledge set." });
+            throw ApiError.forbidden("You do not have permission to manage roles for this knowledge set.");
         }
 
-        // Prepare the update operations
         const updateOps = {};
         if (editorsToAdd && editorsToAdd.length) {
             updateOps['$addToSet'] = { editors: { $each: editorsToAdd } };
@@ -232,12 +250,10 @@ exports.manageRoles = async function (req, res, next) {
             updateOps['$pullAll'] = { ...updateOps['$pullAll'], viewers: viewersToRemove };
         }
 
-        // Perform the update operation
-        await KnowledgeSet.updateOne({ uuid: uuid }, updateOps);
+        await KnowledgeSet.updateOne({ uuid: knowledgeSetUuid }, updateOps);
 
         res.status(200).json({ message: "Roles updated successfully." });
     } catch (error) {
-        console.error(error);
-        res.status(400).json({ error: error.message });
+        next(error instanceof ApiError ? error : ApiError.internal("An error occurred while managing roles"));
     }
 };

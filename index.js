@@ -14,7 +14,6 @@ app.use('/', express.static(path.join(__dirname, '/public')))
 //Register the routes
 //User management
 app.use('/accounts', require('./routes/accounts'));
-app.use('/categories', require('./routes/categories'));
 
 //Facts
 app.use('/facts', require('./routes/facts'));
@@ -38,6 +37,15 @@ app.use('/rosters', require('./routes/rosters'));
 
 //Work Streams
 app.use('/workStreams', require('./routes/workStreams'));
+
+
+//New Knowledge Mapping features
+app.use('/assignments', require('./routes/assignments.js'));
+app.use('/knowledgeSets', require('./routes/knowledgeMapping/knowledgeSets.js'));
+app.use('/categories', require('./routes/knowledgeMapping/categories.js'));
+app.use('/tags', require('./routes/knowledgeMapping/tags.js'));
+app.use('/documents', require('./routes/knowledgeMapping/documents.js'));
+
 
 
 //Establish a 404 Not Found Custom Response

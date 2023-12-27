@@ -1,7 +1,7 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const administrativeFields = require('./administrativeFields');
-const localizedField = require('./localizedField');
+const administrativeFields = require('../common/administrativeFields');
+const localizedField = require('../common/localizedField');
 
 const MappingSchema = new Schema({
     //Textual name and description

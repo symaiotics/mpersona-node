@@ -2,14 +2,12 @@ const { Schema } = require('mongoose');
 const { v4: uuidv4 } = require('uuid');
 
 const administrativeFields = {
-
     uuid: {
         type: String,
         unique: true,
         required: true,
         default: uuidv4
     },
-
     publishStatus: {
         type: String,
         enum: ['unpublished', 'proposedForPublishing', 'published', 'suspended'],
@@ -18,7 +16,6 @@ const administrativeFields = {
     publishedBy: {
         type: String
     },
-
     owners: {
         type: [{ type: String }],
         default: []

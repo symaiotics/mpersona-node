@@ -1,14 +1,14 @@
 var router = require('express').Router();
-const { checkAndAssignToken, validateAndRenewToken } = require('../middleware/verify');
+const { isAuthenticated, isAdmin, renewToken } = require('../middleware/verify');
 
 //Get the controller
 const filesController = require('../controllers/files');
 // router.get('/parse', [checkAndAssignToken], filesController.parseFiles);
 
-router.get('/', [checkAndAssignToken, validateAndRenewToken], filesController.getFiles);
-router.post('/', [checkAndAssignToken, validateAndRenewToken], filesController.uploadFiles);
-router.post('/create', [checkAndAssignToken, validateAndRenewToken], filesController.createFiles);
-router.post('/update', [checkAndAssignToken, validateAndRenewToken], filesController.updateFiles);
+router.get('/', [isAuthenticated, renewToken], filesController.getFiles);
+router.post('/', [isAuthenticated, renewToken], filesController.uploadFiles);
+router.post('/create', [isAuthenticated, renewToken], filesController.createFiles);
+router.post('/update', [isAuthenticated, renewToken], filesController.updateFiles);
 
 //export the router back to the index.js page
 module.exports = router;

@@ -1,16 +1,16 @@
 var router = require('express').Router();
-const { checkAndAssignToken, validateAndRenewToken } = require('../middleware/verify');
+const { isAuthenticated, isAdmin, renewToken } = require('../middleware/verify');
 
 //Get the controller
 const factController = require('../controllers/facts');
 
 //Recall
-router.get('/', [checkAndAssignToken, validateAndRenewToken], factController.getFacts);
-router.post('/jsonl', [checkAndAssignToken, validateAndRenewToken], factController.getFactsByKnowledgeProfileUuids);
+router.get('/', [isAuthenticated, renewToken], factController.getFacts);
+router.post('/jsonl', [isAuthenticated, renewToken], factController.getFactsByKnowledgeProfileUuids);
 
 //Create
-router.post('/', [checkAndAssignToken, validateAndRenewToken], factController.createFacts);
-router.post('/search', [checkAndAssignToken, validateAndRenewToken], factController.searchFacts);
+router.post('/', [isAuthenticated, renewToken], factController.createFacts);
+router.post('/search', [isAuthenticated, renewToken], factController.searchFacts);
 
 
 

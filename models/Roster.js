@@ -65,7 +65,6 @@ const RosterSchema = new Schema({
         default: []
     },
 
-
     //Copies
     personas: {
         type: Array,

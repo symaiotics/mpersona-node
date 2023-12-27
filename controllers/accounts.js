@@ -11,12 +11,13 @@ const promiseHandler = require('../error/promiseHandler');
 
 //Account Security
 const jwt = require('jsonwebtoken');
-const createJWT = require('../middleware/verify').createJWT;
 const bcrypt = require('bcrypt');
 
 //Load the Models
 const Account = require('../models/account');
 const MailingList = require('../models/MailingList');
+const { createJWT } = require('../middleware/verify');
+
 
 exports.joinMailingList = async function (req, res, next) {
     try {
@@ -108,63 +109,41 @@ exports.createNewAccount = async function (req, res, next) {
 };
 
 
-// Accepts a new account and saves it to the database
+
+// Login endpoint
 exports.login = async function (req, res, next) {
     try {
-        //Variables
-        var username = req.body.username || req.query.username || req.params.username || null;
-        var password = req.body.password || req.query.password || req.params.password || null;
+        const username = req.body.username;
+        const password = req.body.password;
 
-        //Verify Account
-        var findAccount = await Account.findOne({ username: username });
-        if (!findAccount) {
-            return res.status(400).send(JSON.stringify({ message: 'usernameNotFound', payload: null }));
+        if (!username || !password) {
+            throw ApiError.badRequest("Username and password are required.");
         }
-        else //Account Found
-        {
-            bcrypt.compare(password, findAccount.password, async (err, isMatch) => {
-                if (err) {
-                    // throw err;
-                    console.log("Password eval error");
-                    return res.status(400).send(JSON.stringify({ message: 'passwordError', payload: null }));
-                } else if (!isMatch) {
-                    console.log("Password doesn't match!");
-                    return res.status(400).send(JSON.stringify({ message: 'passwordNotFound', payload: null }));
-                } else {
-                    //Login Verified
-                    //Update login information (last logged in)
-                    //Update the user account information and remove password reset information if the login was successful
-                    var toSet = {
-                        $set: {
-                            momentLastLogin: new Date(),
-                            passwordResetRequired: null,
-                            passwordResetRequested: null,
-                            passwordResetToken: null,
-                            momentPasswordResetTokenExpires: null,
-                        }
-                    }
 
-                    //If this is the first login, note it with the dateTime
-                    if (!findAccount.momentFirstLogin) toSet.momentFirstLogin = toSet.momentLastLogin;
-
-                    //Update the login account
-                    await Account.updateOne({ username: username }, toSet);
-
-                    //Set the header to return
-                    var newToken = createJWT(findAccount, req.fullUrl);
-                    res.header('auth-token', newToken.token);
-                    res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded));
-
-                    //TODO Insert token into logins collection
-
-                    //Return a successful login
-                    res.status(200).send(JSON.stringify({ message: "Success", payload: null }))
-                }
-            });
+        const account = await Account.findOne({ username });
+        if (!account) {
+            throw ApiError.notFound("Account not found.");
         }
-    }
-    catch (error) {
-        console.log(error)
+
+        const passwordMatch = await bcrypt.compare(password, account.password);
+        if (!passwordMatch) {
+            throw ApiError.unauthorized("Incorrect password.");
+        }
+
+        // Update last login timestamp
+        account.momentLastLogin = new Date();
+        if (!account.momentFirstLogin) {
+            account.momentFirstLogin = account.momentLastLogin;
+        }
+        await account.save();
+
+        // Create and send the token
+        const tokenInfo = { username: account.username, roles: account.roles };
+        const newToken = createJWT(tokenInfo, 'login');
+        res.header('auth-token', newToken.token);
+        res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded));
+        res.status(200).json({ message: "Login successful", token: newToken.token });
+    } catch (error) {
+        next(error);
     }
 };
-

@@ -1,32 +1,31 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
-const administrativeFields = require('./administrativeFields');
-const localizedField = require('./localizedField');
-const localizedArrayField = require('./localizedArrayField');
+const administrativeFields = require('../common/administrativeFields');
+const localizedField = require('../common/localizedField');
+const localizedArrayField = require('../common/localizedArrayField');
 
 
 const DocumentSchema = new Schema({
     //Textual name and description
     name: localizedField('name'),
     description: localizedField('description'),
-
     keywords: localizedArrayField('keywords'),
-
-    categoryScores: {
-        type: [{
-            categoryUuid: { type: String, required: true },
-            en: { type: String, trim: true },
-            fr: { type: String, trim: true },
-            score: { type: Number, default: null }
-        }],
-        validate: {
-            validator: function (array) {
-                return array.every(item => item.categoryUuid && (item.en || item.fr));
-            },
-            message: 'Each category score must have a `categoryUuid` and at least one of `en` or `fr` provided.'
-        },
-        default: []
-    },
+    categories: { type: Array },
+    // categoryScores: {
+    //     type: [{
+    //         categoryUuid: { type: String, required: true },
+    //         en: { type: String, trim: true },
+    //         fr: { type: String, trim: true },
+    //         score: { type: Number, default: null }
+    //     }],
+    //     validate: {
+    //         validator: function (array) {
+    //             return array.every(item => item.categoryUuid && (item.en || item.fr));
+    //         },
+    //         message: 'Each category score must have a `categoryUuid` and at least one of `en` or `fr` provided.'
+    //     },
+    //     default: []
+    // },
 
     //Original file information
     original: {
@@ -48,7 +47,6 @@ const DocumentSchema = new Schema({
 
     //Generated image preview by mammoth + html2canvas
     imgStorageUrl: { type: String },
-
 
     //Tags to organize the Docunments 
     tagUuids: {

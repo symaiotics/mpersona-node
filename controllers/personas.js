@@ -29,7 +29,7 @@ exports.getPersonas = async function (req, res, next) {
         var viewAll = req.body.viewAll || req.query.viewAll || false;
         var username = req?.tokenDecoded?.username || null;
         var roles = req?.tokenDecoded?.roles || [];
-
+ 
         const baseQuery = { status: 'active' };
         var query;
 
@@ -78,7 +78,7 @@ exports.getPersonas = async function (req, res, next) {
             });
         }
 
-        var personas = await Persona.aggregate(aggregation).sort('name');
+        var personas = await Persona.aggregate(aggregation).sort('momentUpdated').sort('name');
 
         if (personas.length > 0) {
             res.status(200).send({ message: "Here are all the active personas", payload: personas });

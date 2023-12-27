@@ -1,17 +1,17 @@
 var router = require('express').Router();
-const {checkAndAssignToken, validateAndRenewToken, verifyAdmin} = require('../middleware/verify');
+const { isAuthenticated, isAdmin, renewToken } = require('../middleware/verify');
 
 //Get the controller
 const lexiconController = require('../controllers/lexicon');
 
 //Recall
-router.get('/', [checkAndAssignToken], lexiconController.getLexicon);
+router.get('/', [], lexiconController.getLexicon);
 
 //Create / Update
-router.post('/', [checkAndAssignToken], lexiconController.updateLexicon);
+router.post('/',[isAuthenticated, isAdmin, renewToken], lexiconController.updateLexicon);
 
 //Delete
-router.delete('/', [checkAndAssignToken, validateAndRenewToken, verifyAdmin], lexiconController.deleteLexicon);
+router.delete('/', [isAuthenticated, isAdmin, renewToken], lexiconController.deleteLexicon);
 
 //export the router back to the index.js page
 module.exports = router;

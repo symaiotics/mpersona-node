@@ -1,69 +1,61 @@
 const jwt = require('jsonwebtoken');
 const uuidv4 = require('uuid').v4;
 
-// const validateToken = (req, res, next) => {
-//     const authHeader = req.headers.authorization;
-
-//     if (authHeader) {
-//         const token = authHeader.split(' ')[1];
-
-//         jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
-//             if (err) {
-//                 return res.sendStatus(403);
-//             }
-
-//             req.user = user;
-//             next();
-//         });
-//     } else {
-//         res.sendStatus(401);
-//     }
-// };
-
-
-const checkAndAssignToken = (req, res, next) => {
+// Middleware to verify if the user is authenticated
+const isAuthenticated = (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (authHeader) {
         const token = authHeader.split(' ')[1];
-        jwt.verify(token, process.env.ACCESS_TOKEN_SECRET, (err, user) => {
+        jwt.verify(token, process.env.JWT_SECRET, (err, decodedToken) => {
             if (err) {
-                // return res.sendStatus(403);
+                return res.status(403).json({ message: "Invalid or expired token." });
             }
-            req.token = token;
-            req.tokenDecoded = jwt.decode(token);
+            req.tokenDecoded = decodedToken; // Assign the decoded token to req.tokenDecoded
+            next();
         });
+    } else {
+        res.sendStatus(401);
     }
-    // console.log("OK req.token", req.token)
-    next();
-
 };
 
-const validateAndRenewToken = (req, res, next) => {
-
-    //If the token has been decoded and is good, then we can proceed
-    //We also mint a new token if it is expiring
-    if (req.tokenDecoded) {
-
-        //If the token is about to explore within 20 minutes generate a new token and attach it as a response header
-        const expirationDate = new Date(req.tokenDecoded.exp * 1000);
-        const twentyMinutesFromNow = new Date(Date.now() + 20 * 60 * 1000);
-        if (expirationDate < twentyMinutesFromNow) {
-            var newToken = createJWT(req.tokenDecoded, req.fullUrl)
-            res.header('auth-token', newToken.token)
-            res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded))
-
-
-        }
-        // console.log("OK Validated", req.token)
+// Middleware to verify if the user is authenticated
+// Allow the controller to tap into req.tokenDecoded to enable some additional functions
+const decodeValidToken = (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader) {
+        const token = authHeader.split(' ')[1];
+        jwt.verify(token, process.env.JWT_SECRET, (err, decodedToken) => {
+            if (!err) {
+                req.tokenDecoded = decodedToken; // Assign the decoded token to req.tokenDecoded
+            }
+            next();
+        });
+    } else {
         next();
     }
-    else {
-        return res.sendStatus(403);
+};
+
+
+
+// Middleware to renew the token if it's about to expire
+const renewToken = (req, res, next) => {
+    const tokenDecoded = req.tokenDecoded;
+    if (tokenDecoded) {
+        const expirationDate = new Date(tokenDecoded.exp * 1000);
+        const twentyMinutesFromNow = new Date(Date.now() + 20 * 60 * 1000);
+        if (expirationDate < twentyMinutesFromNow) {
+            const newToken = createJWT(tokenDecoded, 'token-renewal');
+            res.header('auth-token', newToken.token);
+            res.header('auth-token-decoded', JSON.stringify(newToken.tokenDecoded));
+        }
+        next();
+    } else {
+        next(); // No user decoded, isAuthenticated middleware will handle it
     }
 };
 
+// Function to create JWT
 function createJWT(account, source) {
-    // Payload
     const tokenDecoded = {
         username: account.username,
         roles: account.roles,
@@ -71,24 +63,19 @@ function createJWT(account, source) {
         iss: source,
         nbf: Math.floor(Date.now() / 1000),
         jti: uuidv4(),
-        iat: Math.floor(Date.now() / 1000), // current time in seconds
-        exp: Math.floor(Date.now() / 1000) + (120 * 60) // expiry time in seconds (120 minutes from now)
+        iat: Math.floor(Date.now() / 1000),
+        exp: Math.floor(Date.now() / 1000) + (60 * 60) // one hour
     };
-
-    // Create JWT
     const token = jwt.sign(tokenDecoded, process.env.JWT_SECRET);
     return { token, tokenDecoded };
 }
 
 // Middleware to check if the user is an admin
-function verifyAdmin(req, res, next) {
+function isAdmin(req, res, next) {
     const roles = req.tokenDecoded?.roles || [];
     if (!roles.includes('admin')) {
         return res.status(403).send({ message: "Access denied. Only admins can perform this action." });
     }
     next();
 }
-
-
-module.exports = { checkAndAssignToken, validateAndRenewToken, createJWT, verifyAdmin };
-
+module.exports = { isAuthenticated, decodeValidToken, renewToken, createJWT, isAdmin };

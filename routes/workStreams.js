@@ -1,18 +1,18 @@
 var router = require('express').Router();
-const {checkAndAssignToken, validateAndRenewToken} = require('../middleware/verify');
+const { isAuthenticated, renewToken } = require('../middleware/verify');
 
 //Get the controller
 const workStreamsController = require('../controllers/workStreams');
 
 //Recall
-router.get('/', [checkAndAssignToken], workStreamsController.getWorkStreams);
+router.get('/', [isAuthenticated, renewToken], workStreamsController.getWorkStreams);
 
 //Create
-router.post('/', [checkAndAssignToken], workStreamsController.createWorkStreams);
-router.post('/update', [checkAndAssignToken, validateAndRenewToken], workStreamsController.updateWorkStreams);
+router.post('/', [isAuthenticated, renewToken], workStreamsController.createWorkStreams);
+router.post('/update', [isAuthenticated, renewToken], workStreamsController.updateWorkStreams);
 
 //Delete
-router.get('/delete', [checkAndAssignToken, validateAndRenewToken], workStreamsController.deleteWorkStream);
+router.get('/delete', [isAuthenticated, renewToken], workStreamsController.deleteWorkStream);
 
 
 //export the router back to the index.js page

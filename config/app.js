@@ -47,6 +47,7 @@ if (process.env.AZURE_OPENAI_KEY) {
 }
 
 console.log("Services activated:", services)
+console.log("Environment", process.env.NODE_ENV)
 //Process JSON and urlencoded parameters
 app.use(express.json({ extended: true, limit: '100mb' }));
 app.use(express.urlencoded({ extended: true, limit: '100mb' })); //The largest incoming payload
@@ -74,9 +75,9 @@ app.use(cors(
   { exposedHeaders: ['Content-Length', 'Content-Type', 'auth-token', 'auth-token-decoded'] }
 )); //Unrestricted CORS
 
-//Register Custom Global Middleware
-const logger = require("../middleware/logger").logger;
-app.use(logger)
+//Bring in the logger
+const expressLogger = require("../middleware/expressLogger"); 
+app.use(expressLogger);
 
 //Create HTTP Server
 const server = http.createServer(app);

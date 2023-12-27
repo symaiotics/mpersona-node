@@ -12,13 +12,9 @@ var AccountSchema = new mongoose.Schema({
   useCase: { type: String, required: false },
   notes: { type: String, required: false },
   preferredLng: { type: String, required: false }, //the user's preferred language code
-  roles: { type: [String], required: true, enum: ['user', 'contributor', 'owner', 'sysadmin'], }, //an array of roles for this account
+  roles: { type: [String], required: true, enum: ['user', 'contributor', 'owner', 'admin'], }, //an array of roles for this account
   active: { type: Boolean, required: true }, //active:false means the account is paused or suspend the account temporarily
 
-  //Integrations
-  openAi: { type: String, required: false },
-  shopify: { type: String, required: false },
-  gmail: { type: String, required: false },
 
   //Account settings info
   momentFirstLogin: { type: Date, required: false }, //the moment of the first login

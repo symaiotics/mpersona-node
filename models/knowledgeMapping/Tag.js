@@ -2,8 +2,8 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const administrativeFields = require('./administrativeFields');
-const localizedField = require('./localizedField');
+const administrativeFields = require('../common/administrativeFields');
+const localizedField = require('../common/localizedField');
 
 const TagSchema = new Schema({
     //Textual name and description
@@ -11,7 +11,7 @@ const TagSchema = new Schema({
     description: localizedField('description'),
     ...administrativeFields
 }, {
-    collection: 'tags',
+    collection: 'metadataTags',
     timestamps: { createdAt: 'momentCreated', updatedAt: 'momentUpdated' } // Use custom field names for timestamps
 });
 

@@ -1,27 +1,36 @@
+require('dotenv').config();
+const uuidv4 = require('uuid').v4;
 
-require('dotenv').config()
 const ApiError = require('./ApiError');
+const logger = require('../middleware/logger');
 
 function apiErrorHandler(err, req, res, next) {
+  const isOperationalError = err instanceof ApiError && err.isOperational;
 
-  if (err instanceof ApiError) {
-    res.status(err.code).json(err.message);
-    return;
+  if (isOperationalError) {
+    // Operational errors are safe to expose to the client
+    res.status(err.status).json({ message: err.message });
+  } else {
+    // Non-operational errors (programming errors, etc.) should not leak details
+    const errorId = uuidv4(); // Use a function to generate a unique error ID
+    logger.error({
+      id: errorId,
+      message: err.message,
+      stack: err.stack
+    });
+
+    const statusCode = 500;
+    const responseMessage = process.env.MODE === 'DEV'
+      ? `An unexpected error occurred. Error ID: ${errorId}`
+      : 'An unexpected error occurred. Please try again later.';
+
+    res.status(statusCode).json({ message: responseMessage });
   }
 
-  if(process.env.MODE == 'DEV')
-  {
-    // console.log(err.message);
-    res.status(err.code || 500).json({message:err.message});    
-    //May not want to log the error
+  // Ensure you call next() with an error if you cannot handle it
+  if (!res.headersSent) {
+    next(err);
   }
-  else //All non-DEV environments such as QA/PROD/UT etc.
-  {
-    //Most definitely want to log the error in some sort of logger
-    //TODO : Persist the real error into the DB (err.message)
-    res.status(500).json({message:'Generic server error message.'});    
-  }
-
 }
 
 module.exports = apiErrorHandler;

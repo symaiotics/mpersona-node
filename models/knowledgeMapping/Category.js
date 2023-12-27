@@ -1,9 +1,9 @@
 const mongoose = require('mongoose');
 const { Schema } = mongoose;
 
-const administrativeFields = require('./administrativeFields');
-const localizedField = require('./localizedField');
-const localizedArrayField = require('./localizedArrayField');
+const administrativeFields = require('../common/administrativeFields');
+const localizedField = require('../common/localizedField');
+// const localizedArrayField = require('../common/localizedArrayField');
 
 const CategorySchema = new Schema({
 
@@ -15,11 +15,11 @@ const CategorySchema = new Schema({
     context: localizedField('context'),
 
     // Localized keywords
-    keywords: localizedArrayField('keywords'),
+    // keywords: localizedArrayField('keywords'),
 
     ...administrativeFields
 }, {
-    collection: 'categories',
+    collection: 'metadataCategories',
     timestamps: { createdAt: 'momentCreated', updatedAt: 'momentUpdated' } // Use custom field names for timestamps
 });
 

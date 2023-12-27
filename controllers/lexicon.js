@@ -1,25 +1,40 @@
 const express = require('express');
 const router = express.Router();
 const Lexicon = require('../models/Lexicon'); // Assuming Lexicon model is exported from the models directory
-
+const ApiError = require('../error/ApiError');
 
 // Get all lexicon entries
 exports.getLexicon = async function (req, res, next) {
     try {
-        const lexiconEntries = await Lexicon.find({}).sort({code:1});
-        res.status(200).json({message:'full lexicon', payload:lexiconEntries});
+        const lexiconEntries = await Lexicon.find({}).sort({ code: 1 });
+        res.status(200).json({ message: 'Full lexicon retrieved successfully', payload: lexiconEntries });
     } catch (error) {
-        res.status(500).send({ message: "Error retrieving lexicon entries", error });
+        next(new ApiError.internal("Error retrieving lexicon entries")); // Use ApiError class
     }
 };
 
-// Add or update lexicon entries (admin only)
+
+//Update the lexicon with new words or changes
 exports.updateLexicon = async function (req, res, next) {
     try {
         const { words } = req.body;
         if (!Array.isArray(words)) {
-            return res.status(400).send({ message: "Invalid input. 'words' must be an array." });
+            throw ApiError.badRequest("Invalid input. 'words' must be an array.");
         }
+
+        const isValidWord = (word) => {
+            if (!word || typeof word !== 'object') return false;
+            if (typeof word.code !== 'string' || word.code.trim() === '') return false;
+            if (typeof word.word !== 'object' || word.word === null) return false;
+            if (word.keywords && !Array.isArray(word.keywords)) return false;
+            if (word.keywords && word.keywords.some(kw => typeof kw !== 'string')) return false;
+            return true;
+        };
+
+        if (!words.every(isValidWord)) {
+            throw ApiError.badRequest("Invalid input. Each 'word' must have a valid 'code', 'word' object, and an optional array of 'keywords'.");
+        }
+
         const updates = words.map((word) => ({
             updateOne: {
                 filter: { code: word.code },
@@ -27,10 +42,11 @@ exports.updateLexicon = async function (req, res, next) {
                 upsert: true
             }
         }));
+
         await Lexicon.bulkWrite(updates);
-        res.status(200).send({ message: "Lexicon updated successfully" });
+        res.status(200).json({ message: "Lexicon updated successfully", payload: null });
     } catch (error) {
-        res.status(500).send({ message: "Error updating lexicon", error });
+        next(error instanceof ApiError ? error : ApiError.internal("Error updating lexicon"));
     }
 };
 
@@ -40,11 +56,10 @@ exports.deleteLexicon = async function (req, res, next) {
         const { code } = req.params;
         const result = await Lexicon.deleteOne({ code });
         if (result.deletedCount === 0) {
-            return res.status(404).send({ message: "Lexicon entry not found" });
+            throw new ApiError.notFound("Lexicon entry not found"); // Use ApiError class
         }
-        res.status(200).send({ message: "Lexicon entry deleted successfully" });
+        res.status(200).json({ message: "Lexicon entry deleted successfully", payload: null });
     } catch (error) {
-        res.status(500).send({ message: "Error deleting lexicon entry", error });
+        next(error.isOperational ? error : new ApiError.internal("Error deleting lexicon entry")); // Use ApiError class
     }
 };
-
