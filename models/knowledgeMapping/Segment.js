@@ -10,44 +10,29 @@ const SegmentSchema = new Schema({
     name: localizedField('name'),
     description: localizedField('description'),
     keywords: localizedArrayField('keywords'),
+    categories: { type: Array },
 
-    categoryScores: {
-        type: [{
-            categoryUuid: { type: String, required: true },
-            en: { type: String, trim: true },
-            fr: { type: String, trim: true },
-            score: { type: Number, default: null }
-        }],
-        validate: {
-            validator: function (array) {
-                return array.every(item => item.categoryUuid && (item.en || item.fr));
-            },
-            message: 'Each category score must have a `categoryUuid` and at least one of `en` or `fr` provided.'
-        },
-        default: []
-    },
-
-    //The specific document the Segment came from
-    documentUuid: {
+    //Document source
+    //This is point in time, but just in case the parent document is deleted, to keep a reference
+    documentName: localizedField('name'),
+    documentDescription: localizedField('description'),
+    documentUuid: { //The specific document the Segment came from
         type: String,
     },
 
     //Position from the original document
     cursorStart: { type: Number },
     cursorEnd: { type: Number },
-
     htmlContent: { type: String, }, //Converted to HTML
     htmlLength: { type: Number, },
     textContent: { type: String, }, //Converted to Text
     textLength: { type: Number, },
-
     
     //Tags to organize the Segments 
     tagUuids: {
         type: [String],
         default: []
     },
-
 
     ...administrativeFields
 }, {
