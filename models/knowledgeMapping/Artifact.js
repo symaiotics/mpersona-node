@@ -12,7 +12,7 @@ const ArtifactSchema = new Schema({
     description: localizedField('description'),
 
     //If triaged
-    keywords: localizedArrayField('keywords'),
+    keywords:  { type: Array },
     categories: { type: Array },
 
     //Q*A Mode
