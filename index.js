@@ -46,7 +46,7 @@ app.use('/categories', require('./routes/knowledgeMapping/categories.js'));
 app.use('/tags', require('./routes/knowledgeMapping/tags.js'));
 app.use('/documents', require('./routes/knowledgeMapping/documents.js'));
 app.use('/segments', require('./routes/knowledgeMapping/segments.js'));
-
+app.use('/artifacts', require('./routes/knowledgeMapping/artifacts.js'));
 
 
 //Establish a 404 Not Found Custom Response
