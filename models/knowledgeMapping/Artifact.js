@@ -12,23 +12,21 @@ const ArtifactSchema = new Schema({
     description: localizedField('description'),
 
     //If triaged
-    keywords:  { type: Array },
+    keywords: { type: Array },
     categories: { type: Array },
 
-    //Q*A Mode
-    prompt: { type: String },
-    message: { type: String },
-    auditText: { type: String },
-    auditJson: { type: Object },
     //Chat Mode
-    messageHistory: { type: Array },
+    chatMessageHistory: { type: Array },
 
-    //Score
-    completeness:{type:Number, min:0, max:10},
-    accuracy:{type:Number, min:0, max:10},
-    tone:{type:Number, min:0, max:10},
-    overall:{type:Number, min:0, max:10},
-    comments:{type:String},
+    //Q*A Mode
+    triageText: { type: String },
+    triageJson: { type: Object },
+    referenceText: { type: String },
+    referenceJson: { type: Object },
+
+    prompt: { type: String },
+    messages: { type: [String], default: [] },
+
     //Final translated
     finalText: {
         en: {
@@ -38,6 +36,18 @@ const ArtifactSchema = new Schema({
             type: String,
         }
     },
+
+    auditText: { type: String },
+    auditJson: { type: Object },
+
+
+    //Score
+    completeness: { type: Number, min: 0, max: 10 },
+    accuracy: { type: Number, min: 0, max: 10 },
+    tone: { type: Number, min: 0, max: 10 },
+    overall: { type: Number, min: 0, max: 10 },
+    comments: { type: String },
+
 
     //PErsona used to generate
     personaUuids: {
@@ -63,8 +73,8 @@ const ArtifactSchema = new Schema({
         default: []
     },
 
- 
-  
+
+
 
 
     ...administrativeFields
