@@ -190,15 +190,16 @@ exports.deleteCategories = async function (req, res, next) {
                 continue;
             }
 
-            const isEditor = category.editors.includes(username);
-            const isAdmin = roles.includes('admin');
+            // const isEditor = category.editors.includes(username);
+            // const isAdmin = roles.includes('admin');
 
-            if (!isEditor && !isAdmin) {
-                throw ApiError.forbidden("You do not have permission to delete this Category.");
-            }
+            // if (!isEditor && !isAdmin) {
+            //     throw ApiError.forbidden("You do not have permission to delete this Category.");
+            // }
 
             // Delete the Category
-            await Category.deleteOne({ uuid: uuid });
+            // await Category.deleteOne({ uuid: uuid });
+            await Category.updateOne({uuid:uuid}, {$set:{status:'inactive'}})
 
             // Remove the uuid from the knowledgeSet's categoryUuids
             await KnowledgeSet.updateMany(

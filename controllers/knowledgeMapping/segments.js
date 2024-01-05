@@ -230,15 +230,16 @@ exports.deleteSegments = async function (req, res, next) {
                 continue;
             }
 
-            const isEditor = segment.editors.includes(username);
-            const isAdmin = roles.includes('admin');
+            // const isEditor = segment.editors.includes(username);
+            // const isAdmin = roles.includes('admin');
 
-            if (!isEditor && !isAdmin) {
-                throw ApiError.forbidden("You do not have permission to delete this Segment.");
-            }
+            // if (!isEditor && !isAdmin) {
+            //     throw ApiError.forbidden("You do not have permission to delete this Segment.");
+            // }
 
             // Delete the Segment
-            await Segment.deleteOne({ uuid: uuid });
+            // await Segment.deleteOne({ uuid: uuid });
+            await Segment.updateOne({uuid:uuid}, {$set:{status:'inactive'}})
 
             // Remove the uuid from the knowledgeSet's segmentUuids
             await KnowledgeSet.updateMany(

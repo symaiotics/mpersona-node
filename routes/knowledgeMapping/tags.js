@@ -14,7 +14,7 @@ router.post('/', [isAuthenticated, renewToken], tagsController.createTags);
 router.patch('/', [isAuthenticated, renewToken], tagsController.updateTags);
 
 //Delete
-router.delete('/', [isAuthenticated, renewToken], tagsController.deleteTags);
+router.post('/delete', [isAuthenticated, renewToken], tagsController.deleteTags);
 
 //export the router back to the index.js page
 module.exports = router;

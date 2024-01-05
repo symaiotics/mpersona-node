@@ -15,7 +15,7 @@ router.patch('/tags', [isAuthenticated, renewToken], artifactsController.addRemo
 router.patch('/', [isAuthenticated, renewToken], artifactsController.updateArtifacts);
 
 //Delete
-router.delete('/', [isAuthenticated, renewToken], artifactsController.deleteArtifacts);
+router.post('/delete', [isAuthenticated, renewToken], artifactsController.deleteArtifacts);
 
 //export the router back to the index.js page
 module.exports = router;

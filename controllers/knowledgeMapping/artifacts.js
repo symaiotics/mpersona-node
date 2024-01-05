@@ -230,15 +230,16 @@ exports.deleteArtifacts = async function (req, res, next) {
                 continue;
             }
 
-            const isEditor = artifact.editors.includes(username);
-            const isAdmin = roles.includes('admin');
+            // const isEditor = artifact.editors.includes(username);
+            // const isAdmin = roles.includes('admin');
 
-            if (!isEditor && !isAdmin) {
-                throw ApiError.forbidden("You do not have permission to delete this Artifact.");
-            }
+            // if (!isEditor && !isAdmin) {
+            //     throw ApiError.forbidden("You do not have permission to delete this Artifact.");
+            // }
 
             // Delete the Artifact
-            await Artifact.deleteOne({ uuid: uuid });
+            // await Artifact.deleteOne({ uuid: uuid });
+            await Artifact.updateOne({uuid:uuid}, {$set:{status:'inactive'}})
 
             // Remove the uuid from the knowledgeSet's artifactUuids
             await KnowledgeSet.updateMany(

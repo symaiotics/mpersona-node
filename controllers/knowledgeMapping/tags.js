@@ -150,8 +150,8 @@ exports.updateTags = async function (req, res, next) {
                 throw ApiError.notFound(`Tag with UUID ${update.uuid} not found.`);
             }
 
-            const isEditor = tag.editors.includes(username);
-            const isAdmin = roles.includes('admin');
+            // const isEditor = tag.editors.includes(username);
+            // const isAdmin = roles.includes('admin');
 
             // if (!isEditor && !isAdmin) {
             //     throw ApiError.forbidden("You do not have permission to update this Tag.");
@@ -195,12 +195,12 @@ exports.deleteTags = async function (req, res, next) {
                 continue;
             }
 
-            const isEditor = tag.editors.includes(username);
-            const isAdmin = roles.includes('admin');
+            // const isEditor = tag.editors.includes(username);
+            // const isAdmin = roles.includes('admin');
 
-            if (!isEditor && !isAdmin) {
-                throw ApiError.forbidden("You do not have permission to delete this Tag.");
-            }
+            // if (!isEditor && !isAdmin) {
+            //     throw ApiError.forbidden("You do not have permission to delete this Tag.");
+            // }
 
             // Delete the Tag
             await Tag.deleteOne({ uuid: uuid });

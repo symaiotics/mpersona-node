@@ -14,7 +14,7 @@ router.post('/', [isAuthenticated, renewToken], categoriesController.createCateg
 router.patch('/', [isAuthenticated, renewToken], categoriesController.updateCategories);
 
 //Delete
-router.delete('/', [isAuthenticated, renewToken], categoriesController.deleteCategories);
+router.post('/delete', [isAuthenticated, renewToken], categoriesController.deleteCategories);
 
 //export the router back to the index.js page
 module.exports = router;

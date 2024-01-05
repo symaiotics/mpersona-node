@@ -14,7 +14,7 @@ router.post('/', [isAuthenticated, renewToken], knowledgeSetController.createKno
 router.patch('/', [isAuthenticated, renewToken], knowledgeSetController.updateKnowledgeSets);
 
 //Delete
-router.delete('/', [isAuthenticated, renewToken], knowledgeSetController.deleteKnowledgeSets);
+router.post('/delete', [isAuthenticated, renewToken], knowledgeSetController.deleteKnowledgeSets);
 
 //export the router back to the index.js page
 module.exports = router;

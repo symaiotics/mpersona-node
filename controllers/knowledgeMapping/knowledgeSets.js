@@ -180,6 +180,7 @@ exports.deleteKnowledgeSets = async function (req, res, next) {
         var knowledgeSetUuids = req.body.knowledgeSetUuids || [];
         var username = req.tokenDecoded?.username;
         var roles = req.tokenDecoded?.roles || [];
+        console.log("Delete", knowledgeSetUuids)
 
         if (!Array.isArray(knowledgeSetUuids)) {
             throw ApiError.badRequest("Knowledge set UUIDs should be an array.");
@@ -202,7 +203,9 @@ exports.deleteKnowledgeSets = async function (req, res, next) {
             }
 
             // Delete the knowledge set
-            await KnowledgeSet.deleteOne({ uuid: uuid });
+            let madeInactive = await KnowledgeSet.updateOne({uuid:uuid}, {$set:{status:'inactive'}})
+            console.log('madeInactive', madeInactive)
+            // await KnowledgeSet.deleteOne({ uuid: uuid });
 
             // Remove the uuid from the roster's knowledgeSetUuids
             await Roster.updateMany(
@@ -213,6 +216,7 @@ exports.deleteKnowledgeSets = async function (req, res, next) {
 
         res.status(200).json({ message: "Knowledge sets deleted successfully." });
     } catch (error) {
+        console.log(error)
         next(error instanceof ApiError ? error : ApiError.internal("An error occurred while deleting knowledge sets"));
     }
 };

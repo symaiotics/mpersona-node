@@ -15,7 +15,7 @@ router.patch('/tags', [isAuthenticated, renewToken], documentsController.addRemo
 router.patch('/', [isAuthenticated, renewToken], documentsController.updateDocuments);
 
 //Delete
-router.delete('/', [isAuthenticated, renewToken], documentsController.deleteDocuments);
+router.post('/delete', [isAuthenticated, renewToken], documentsController.deleteDocuments);
 
 //export the router back to the index.js page
 module.exports = router;
