@@ -76,7 +76,7 @@ app.use(cors(
 )); //Unrestricted CORS
 
 //Bring in the logger
-const expressLogger = require("../middleware/expressLogger"); 
+const expressLogger = require("../middleware/expressLogger");
 app.use(expressLogger);
 
 //Create HTTP Server
@@ -166,7 +166,7 @@ wss.on('connection', (ws) => {
 
 //Execute an OpenAI prompt
 async function prompt(uuid, session, provider, model, temperature, systemPrompt, userPrompt, messageHistory, knowledgeProfileUuids) {
-
+  console.log("Prompt beginning")
   //Enrich the prompt with some context data
   // userPrompt = "The date is " + new Date().toDateString() + "\n\n" + userPrompt + "\n\n";
   let messages = [];
@@ -274,35 +274,57 @@ async function prompt(uuid, session, provider, model, temperature, systemPrompt,
       }
     }
 
-    if (services.azureOpenAi && provider == 'azureOpenAi') {
-      const stream = Readable.from(responseStream);
-      stream.on('data', (event) => {
-        for (const choice of event.choices) {
-          if (choice.delta?.content !== undefined) {
-            sendToClient(uuid, session, "message", choice.delta?.content)
-          }
-        }
-      });
 
-      stream.on('end', () => {
-        sendToClient(uuid, session, "EOM", null);
-      });
+    if (services.azureOpenAi && provider == 'azureOpenAi') {
+      try {
+        const stream = Readable.from(responseStream);
+
+        stream.on('data', (event) => {
+          try {
+            for (const choice of event.choices) {
+              if (choice.delta?.content !== undefined) {
+                sendToClient(uuid, session, "message", choice.delta?.content)
+              }
+            }
+          } catch (error) {
+            // Handle error from 'data' event here
+            sendToClient(uuid, session, "ERROR", JSON.stringify({ message: "Error processing stream data event.", error }));
+          }
+        });
+
+        stream.on('end', () => {
+          try {
+            console.log("Stream End")
+            sendToClient(uuid, session, "EOM", null);
+          } catch (error) {
+            // Handle error from 'end' event here
+            sendToClient(uuid, session, "ERROR", JSON.stringify({ message: "Error processing stream end event.", error }));
+          }
+        });
+
+        stream.on('error', (error) => {
+          // Handle stream error here
+          console.log("Stream Error", error)
+          sendToClient(uuid, session, "ERROR", JSON.stringify({ message: "Stream error.", error:error.message }));
+        });
+      } catch (error) {
+        console.log("Prompt Error")
+
+        // Handle error from setting up the stream handlers
+        sendToClient(uuid, session, "ERROR", JSON.stringify({ message: "Error setting up stream handlers.", error }));
+      }
     }
+
 
   }
   catch (error) {
-    console.log("Error", error)
-    try {
-      var errorObj = {
-        status: error?.response?.status,
-        statusText: error?.response?.statusText
-      }
-      sendToClient(uuid, session, "ERROR", JSON.stringify(errorObj))
-      console.error('Could not JSON parse stream message', errorObj);
+    console.log("Prompt Error", error)
+    var errorObj = {
+      status: error?.response?.status,
+      statusText: error?.response?.statusText
     }
-    catch (sendError) {
-      console.log("Send Error", sendError)
-    }
+    sendToClient(uuid, session, "ERROR", JSON.stringify(error))
+    console.error('Could not JSON parse stream message', error);
     // res.status(500).send({ message: "Prompt failure", payload: error })
   }
 }
